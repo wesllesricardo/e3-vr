@@ -8,7 +8,7 @@ import {
   THREE, DEG, ORG, YEL, COL, F_HEAD, F_BODY, S, hooks, app, tocou, renderer, scene, camera, world, FRENTE, TRAS,
   panel, rich, eyebrow, cardBg, pill, card, botao, setLabel, place, glow, tw, E, reveal, leave, kill, setAlpha, op,
   clamp, updateTweens, updateUpdaters, updatePointers, updateCameraTela, olharTelaPara, anguloOlhar, yawCabeca, view,
-  addUpdater, click,
+  addUpdater, click, ctrls,
 } from './motor.js';
 import { CONTEUDO as K, CONFIG } from './conteudo.js';
 import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNarracaoAtiva, audio } from './audio.js';
@@ -28,7 +28,11 @@ hooks.pegar = m => sfx('pegar', m.getWorldPosition(v3));
 hooks.soltar = m => sfx('soltar', m.getWorldPosition(v3));
 renderer.setClearColor(0x2b2e33, 1);   // em tela, a "sala real" é um cinza neutro
 
-function setFase(f) { fase = f; tFase = 0; }
+function setFase(f) {
+  fase = f; tFase = 0;
+  if (typeof resetTras !== 'undefined') resetTras.visible = f === 'escuro' || f === 'vire';
+  if (typeof rotularReset === 'function' && confirmaAte) { confirmaAte = 0; rotularReset(false); }
+}
 function depois(seg, fn) { tw(seg, () => {}, { done: fn, ease: E.lin }); }
 
 // ------------------------------------------------------------ alinhamento ---
@@ -170,6 +174,46 @@ const btnBack = botao(0.55, 0.22, '← Voltar', () => {});
 const vozBtn = botao(0.42, 0.13, 'Voz ligada', () => alternarVoz());
 vozBtn.position.set(0.98, -0.02, 0);
 nav.add(btnNext, btnBack, vozBtn);
+
+// ---------------------------------------------------------- RESETAR ---
+// Pede um segundo toque para confirmar, evitando reset sem querer.
+let confirmaAte = 0;
+const botoesReset = [];
+function criarReset(w = 0.42, h = 0.13) {
+  const b = card(w, h, (ctx, W, H, s) => pill(ctx, W, H, s.label, { fill: s.confirma ? '#E0524B' : 'rgba(20,16,12,0.92)', stroke: '#E0524B', color: COL.text, size: H * 0.36 }),
+    { label: '↺ RESETAR', confirma: false }, () => pedirReset());
+  botoesReset.push(b);
+  return b;
+}
+function rotularReset(confirma) {
+  botoesReset.forEach(b => {
+    const st = b.userData.mesh.userData.state;
+    st.confirma = confirma; st.label = confirma ? 'Toque de novo' : '↺ RESETAR';
+    b.userData.mesh.userData.redraw();
+  });
+}
+function pedirReset() {
+  if (S.T < confirmaAte) { confirmaAte = 0; rotularReset(false); resetar(); return; }
+  confirmaAte = S.T + 3;
+  rotularReset(true);
+}
+const resetFrente = criarReset();
+resetFrente.position.set(-1.06, -0.02, 0);
+nav.add(resetFrente);
+// no lado sombrio (antes da virada) também dá para resetar
+const resetTras = criarReset(0.5, 0.15);
+place(resetTras, 0, 0.78, 2.0);
+resetTras.rotation.x = -0.35;
+TRAS.add(resetTras);
+resetTras.visible = false;
+// segurar o botão B ou Y do controle por 2 segundos também reseta (atalho do closer)
+let seguraReset = 0;
+function checarBotaoReset(dt) {
+  if (!renderer.xr.isPresenting || fase === 'intro') { seguraReset = 0; return; }
+  const apertado = ctrls.some(c => { const gp = c.userData.src && c.userData.src.gamepad; return gp && gp.buttons[5] && gp.buttons[5].pressed; });
+  seguraReset = apertado ? seguraReset + dt : 0;
+  if (seguraReset > 2) { seguraReset = 0; resetar(); }
+}
 const dots = panel(1.2, 0.05, (ctx, W, H, s) => {
   const seg = 6, act = 16, gap = 2.6, total = (s.n - 1) * (seg + gap) + act;
   let x = (W - total) / 2;
@@ -344,6 +388,7 @@ $('entrarVR').addEventListener('click', () => {
   depois(1.6, iniciarJornada);
 });
 $('vrHud').addEventListener('click', entrarXR);
+$('resetHud').addEventListener('click', () => resetar());
 $('narracao').addEventListener('change', e => aplicarVoz(e.target.checked));
 {
   let salvo = null;
@@ -379,6 +424,8 @@ window.addEventListener('keydown', e => {
 // -------------------------------------------------------------------- loop ---
 const clock = new THREE.Clock();
 function sim(dt) {
+  if (confirmaAte && S.T > confirmaAte) { confirmaAte = 0; rotularReset(false); }
+  checarBotaoReset(dt);
   S.T += dt;
   tFase += dt;
   updateTweens(dt);
