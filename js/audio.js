@@ -8,7 +8,7 @@ import { THREE, camera } from './motor.js';
 let listener = null, ctx = null;
 const bus = {};
 let noiseBuf = null, padFrio = null, padLuz = null, humor = 'nenhum', proxNota = 0, proxTick = 0;
-let narrando = false, tokenVoz = 0, fonteVoz = null;
+let narrando = false, tokenVoz = 0, fonteVoz = null, analisador = null, amostras = null, nivel = 0;
 const buffers = {};
 let manifesto = {};
 
@@ -37,6 +37,13 @@ export function iniciarAudio() {
   bus.musica = ganho(bus.master, 0.0);
   bus.sfx = ganho(bus.master, 0.9);
   bus.voz = ganho(bus.master, 1.0);
+  // a voz sai da luz-guia: panner que acompanha a posição dela
+  bus.vozPan = ctx.createPanner();
+  bus.vozPan.panningModel = 'HRTF'; bus.vozPan.distanceModel = 'inverse'; bus.vozPan.refDistance = 1.2; bus.vozPan.rolloffFactor = 0.25;
+  bus.vozPan.connect(bus.voz);
+  analisador = ctx.createAnalyser(); analisador.fftSize = 256;
+  bus.voz.connect(analisador);
+  amostras = new Uint8Array(analisador.fftSize);
   bus.video = ganho(bus.master, 1.0);
   // eco suave para a trilha
   const eco = ctx.createDelay(1.0), fb = ctx.createGain(), mix = ctx.createGain();
@@ -154,6 +161,7 @@ export function sfx(tipo, pos) {
       ruido(d, 2.4, { tipo: 'lowpass', f0: 200, f1: 6000, vol: 0.14, ataque: 0.7 });
       [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => nota(f, 0.06, 3.2, d, 0.5 + i * 0.09));
       break;
+    case 'guia': [1567.98, 2093.0].forEach((f, i) => nota(f, 0.035, 0.6, d, i * 0.07)); break;
     case 'sucesso': [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => nota(f, 0.09, 1.4, d, i * 0.1)); break;
     case 'dissolver': ruido(d, 3.0, { tipo: 'bandpass', f0: 120, f1: 1800, q: 0.6, vol: 0.12, ataque: 0.6 }); break;
     default: break;
@@ -194,7 +202,7 @@ export function narrar(k, aoTerminar) {
     if (meu !== tokenVoz) return;
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(bus.voz);
+    src.connect(bus.vozPan);
     src.onended = () => { if (fonteVoz === src) { fonteVoz = null; duck(false); fim(); } };
     fonteVoz = src;
     duck(true);
@@ -230,4 +238,18 @@ export function duckVideo(on) {
   if (!ctx) return;
   rampa(bus.musica.gain, on ? 0.12 : (narrando ? 0.28 : 0.6), 0.5);
   if (on) pararNarracao();
+}
+
+// Volume atual da narração (0 a ~0.5), para a luz-guia pulsar enquanto fala.
+export function nivelVoz() {
+  if (!analisador || !fonteVoz) { nivel *= 0.9; return nivel; }
+  analisador.getByteTimeDomainData(amostras);
+  let soma = 0;
+  for (let i = 0; i < amostras.length; i++) { const x = (amostras[i] - 128) / 128; soma += x * x; }
+  nivel = nivel * 0.6 + Math.sqrt(soma / amostras.length) * 0.4;
+  return nivel;
+}
+export function setPosVoz(p) {
+  if (!bus.vozPan) return;
+  bus.vozPan.positionX.value = p.x; bus.vozPan.positionY.value = p.y; bus.vozPan.positionZ.value = p.z;
 }

@@ -65,6 +65,8 @@ function cenaLuz(g) {
     g.add(p);
     reveal(p, { delay: D + 1.2 + i * 0.2, owner: g });
     addUpdater(g, t => { p.position.x = Math.sin(lado * 36 * DEG) * 2.4 + lado * 0.04 * Math.sin(t * 3); });
+    // a luz-guia mostra os depoimentos e, depois, os resultados
+    tw(lado > 0 ? 6 : 11, () => {}, { owner: g, done: () => app.guiar(p) });
   });
 }
 
@@ -150,8 +152,10 @@ function cenaMetodo(g) {
       if (!obj.userData.held) obj.position.y = 1.5 + Math.sin(t * 1.4 + i) * 0.03;
       aro.material.color.set(base.userData.ativo ? YEL : ORG);
     });
+    base.userData.obj = obj;
     return base;
   });
+  app.guiar(pilares[0].userData.obj);
 }
 
 // ===================================================== 2. portais de entrada ===
@@ -203,6 +207,7 @@ function cenaEntrada(g) {
     botao(0.62, 0.14, 'Próximo portal ›', () => ativar(atual + 1, true), { primary: true }),
   ];
   bts.forEach((b, i) => { place(b, -17 + (i ? 4.5 : -9.5), 1.04, 2.4); g.add(b); reveal(b, { delay: D + 0.5, owner: g }); });
+  app.guiar(bts[1]);
   let atual = -1, tAtivo = 0, manual = false;
   function ativar(i, porToque) {
     i = (i + n) % n;
@@ -365,6 +370,7 @@ function cenaEstrutura(g) {
         }, {}, () => abrir(i));
         place(c, ((i % 3) - 1) * 21, i < 3 ? 1.86 : 1.26);
         s.add(c);
+        if (i === e.modulos.findIndex((_, j) => !vistos.has(j))) app.guiar(c);
         reveal(c, { delay: delay + 0.07 * i, owner: s });
       });
     });
@@ -408,6 +414,7 @@ function cenaEstrutura(g) {
       back: { label: '← Módulos', fn: () => grade(0.3) },
       next: ultimo ? { label: 'Continuar →', fn: () => app.avancar() } : { label: 'Próximo módulo →', fn: () => abrir(i + 1) },
     });
+    tw(4, () => {}, { owner: g, done: () => app.guiarContinuar() });
   }
   grade(D);
 }
@@ -441,6 +448,7 @@ function cenaDiagnostico(g) {
         const ang = cols === 3 ? (col - 1) * 17.5 : (col - 0.5) * 25;
         place(b, ang, 1.62 - lin * 0.3, 2.5);
         s.add(b);
+        if (i === 0) app.guiar(b);
         reveal(b, { delay: 0.3 + i * 0.06, owner: s });
       });
     });
@@ -476,6 +484,7 @@ function cenaDiagnostico(g) {
       const b = botao(0.9, 0.2, Q.botaoJornada, () => app.irPara('jornada'), { primary: true });
       place(b, 9, 1.0, 2.4);
       s.add(b);
+      app.guiar(b);
       reveal(b, { delay: 0.7, owner: s });
       const refazer = botao(0.6, 0.2, 'Refazer', () => { for (const k of Object.keys(resp)) delete resp[k]; pergunta(0); });
       place(refazer, -9, 1.0, 2.4);
@@ -584,6 +593,7 @@ function cenaJornada(g) {
   }, { i: 0 });
   place(cardE, -21, 1.45, 2.4);
   g.add(cardE);
+  app.guiar(cardE);
   reveal(cardE, { delay: D + 0.4, owner: g });
   const bts = [
     botao(0.3, 0.14, '‹', () => ativar(atual - 1, true)),
@@ -646,6 +656,7 @@ function cenaAcompanhamento(g) {
   const nucleo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 1), matBrilho(ORG, 0.9));
   nucleo.position.copy(centro);
   g.add(nucleo);
+  app.guiar(nucleo);
   const halo = glow(1.4, ORG, 0.5); halo.position.copy(centro); g.add(halo);
   const orbita = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.006, 6, 120), new THREE.MeshBasicMaterial({ color: ORG, transparent: true, opacity: 0.4 }));
   orbita.rotation.x = Math.PI / 2; orbita.position.copy(centro); g.add(orbita);
@@ -727,6 +738,7 @@ function cenaSimulador(g) {
   }, st);
   place(trilho, 0, 1.06, 2.2);
   g.add(trilho);
+  app.guiar(trilho);
   reveal(trilho, { delay: D + 0.5, owner: g });
   const atualizar = () => {
     trilho.userData.state.inv = st.inv;
@@ -781,6 +793,7 @@ function cenaCta(g) {
   place(assinar, -13.5, 1.55, 2.4);
   place(atend, 13.5, 1.55, 2.4);
   g.add(assinar, atend);
+  app.guiar(assinar);
   reveal(assinar, { delay: D + 0.4, owner: g });
   reveal(atend, { delay: D + 0.55, owner: g });
   const brilho = glow(1.6, YEL, 0.25); brilho.position.copy(assinar.position); brilho.position.z -= 0.05; g.add(brilho);

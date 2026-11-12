@@ -15,6 +15,7 @@ import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNar
 import { amb, setProg, setLuz, updateAmbiente, carregarLogo, direcaoLuz, posicaoChamado, flashLuz, girarNucleo } from './ambiente.js';
 import { criarDepoimentos, ativarDepoimentos, criarCases, ativarCases, updateLaterais, pararVideos } from './laterais.js';
 import { CENAS } from './cenas.js';
+import { criarGuia, guia, updateGuia } from './guia.js';
 
 const params = new URLSearchParams(location.search);
 const ESTACAO = params.get('estacao') ? `Estação ${params.get('estacao')}` : CONFIG.estacaoPadrao;
@@ -63,6 +64,8 @@ function mostrarIntro() {
   const comecar = botao(0.95, 0.2, I.botao, () => iniciarJornada(), { primary: true });
   place(comecar, 0, 1.05, 2.1);
   introGrp.add(comecar);
+  guia.mostrar(true);
+  guia.alvo(comecar, { avisar: false });
   const voz = botao(0.5, 0.13, vozLabel(), () => { alternarVoz(); setLabel(voz, vozLabel()); });
   place(voz, 0, 0.84, 2.1);
   introGrp.add(voz);
@@ -90,6 +93,7 @@ function iniciarJornada() {
   sfx('dissolver');
   if (introGrp) { leave(introGrp, 0.6); introGrp = null; }
   setHumor('frio', 3.5);
+  guia.casa();
   tw(3.4, k => setProg(k), { ease: E.inOut, done: () => {
     setFase('escuro');
     narrar('escuro', () => depois(audio.narracaoAtiva ? 0.6 : 7, mostrarVire));
@@ -117,6 +121,8 @@ function mostrarVire() {
     addUpdater(vireGrp, t => { s.position.x = Math.sin(lado * 26 * DEG) * 2.3 + lado * 0.08 * (0.5 + 0.5 * Math.sin(t * 4)); });
     return s;
   });
+  // a luz-guia voa para trás do visitante, onde está a luz da E3
+  guia.alvo(out => world.localToWorld(out.set(0, 1.55, -2.2)));
   const b = botao(0.7, 0.16, K.escuro.botaoVirar, () => virarParaLuz());
   place(b, 0, 1.15, 2.2);
   vireGrp.add(b);
@@ -152,6 +158,7 @@ function acenderLuz() {
   flashLuz();
   girarNucleo();
   setHumor('luz', 2.5);
+  guia.casa();
   const l0 = amb.luz;
   tw(2.6, k => setLuz(l0 + (1 - l0) * k), { ease: E.inOut });
   depois(2.6, () => {
@@ -257,16 +264,19 @@ function goto(i, { fala = true } = {}) {
   CENAS[i].build(current);
   dots.userData.state.i = i;
   dots.userData.redraw();
-  if (fala) narrar(CENAS[i].fala);
+  // depois da fala, a luz-guia vai até o botão Continuar
+  if (fala) narrar(CENAS[i].fala, () => depois(audio.narracaoAtiva ? 2.5 : 10, () => { if (idx === i && fase === 'luz') guiarContinuar(); }));
   girarNucleo();
   tocou();
 }
+function guiarContinuar() { if (btnNext.visible) guia.alvo(btnNext); }
 function destacarContinuar() {
   if (!btnNext.visible) return;
   tw(1.6, k => btnNext.scale.setScalar(1 + 0.1 * Math.abs(Math.sin(k * Math.PI * 3))), { ease: E.lin });
 }
 Object.assign(app, {
-  goto, setNav, navPadrao, destacarContinuar,
+  goto, setNav, navPadrao, destacarContinuar, guiarContinuar,
+  guiar: o => guia.alvo(o),
   avancar: () => goto(idx + 1),
   voltar: () => goto(idx - 1),
   irPara: (id, op2) => goto(CENAS.findIndex(c => c.id === id), op2),
@@ -310,6 +320,7 @@ function encerrar() {
   if (current) { leave(current); current = null; }
   nav.visible = false;
   setHumor('nenhum', 3);
+  guia.casa();
   sfx('dissolver');
   const p0 = amb.prog, l0 = amb.luz;
   tw(3.2, k => { setProg(p0 * (1 - k)); setLuz(l0 * (1 - k)); }, { ease: E.inOut });
@@ -431,6 +442,7 @@ function sim(dt) {
   updateTweens(dt);
   updateUpdaters(dt);
   updateAmbiente(S.T, dt);
+  updateGuia(dt);
   updateLaterais();
   updatePointers(dt);
   updateCameraTela(dt);
@@ -454,6 +466,7 @@ async function boot() {
   logoTex = await carregarLogo();
   criarDepoimentos();
   criarCases();
+  criarGuia();
   resetar();
   // ensaio: ?cena=N pula direto para a luz na cena N
   if (params.has('cena')) {
