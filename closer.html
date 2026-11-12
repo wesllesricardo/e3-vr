@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roteiro do closer · E3 VR</title>
+<link rel="icon" href="media/logo-e3.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0D0900; --card:#17120d; --line:rgba(255,255,255,.1); --orange:#FF5F1F; --yellow:#FFEC00; --text:#ECECEC; --mute:#A9A39C; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  main { max-width:860px; margin:0 auto; padding:32px 16px 64px; }
+  header { display:flex; gap:14px; align-items:center; margin-bottom:8px; }
+  header img { width:52px; height:auto; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--orange); }
+  h1 { font:800 clamp(26px,5vw,38px)/1.1 "Archivo", system-ui, sans-serif; margin:6px 0 10px; text-wrap:balance; }
+  h2 { font:700 22px/1.2 "Archivo", system-ui, sans-serif; margin:40px 0 12px; }
+  p, li { color:var(--mute); }
+  strong { color:var(--text); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:12px 0; }
+  .cena { display:grid; grid-template-columns: 44px 1fr; gap:14px; }
+  .n { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,95,31,.14); color:var(--orange); font:800 16px "Archivo", sans-serif; }
+  .cena h3 { margin:0 0 4px; font:700 18px/1.25 "Archivo", sans-serif; color:var(--text); }
+  .cena p { margin:4px 0; }
+  .fala { border-left:3px solid var(--orange); padding-left:12px; color:var(--text); font-style:italic; }
+  .perg { color:var(--yellow); }
+  code { background:rgba(255,255,255,.08); padding:2px 6px; border-radius:6px; color:var(--text); font-size:14px; }
+  a { color:var(--orange); }
+  button { font:inherit; font-weight:700; border-radius:999px; padding:12px 20px; cursor:pointer; background:var(--yellow); color:#0D0900; border:0; }
+  button:focus-visible { outline:2px solid var(--yellow); outline-offset:3px; }
+  #res { margin-left:10px; color:var(--mute); font-size:14px; }
+  kbd { border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:1px 6px; font-size:13px; color:var(--text); }
+  @media (max-width:520px) { .cena { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="media/logo-e3.png" alt="E3 Company"><div class="eyebrow">SAFE Experience · Experiência VR</div></header>
+  <h1>Roteiro do closer</h1>
+  <p>O cliente controla o óculos. Você acompanha pelo espelhamento e conduz a conversa. A narração automática pode ficar <strong>ligada</strong> (o cliente ouve a voz guia) ou <strong>desligada</strong>, quando você mesmo explicar cada cena.</p>
+
+  <h2>Antes do evento</h2>
+  <div class="card">
+    <ol>
+      <li><strong>Avisos no seu celular:</strong> instale o app <strong>ntfy</strong> (Android ou iPhone) e assine o tópico <code id="topico">…</code>. Quando o cliente tocar em "Assinar contrato" ou "Falar com atendente", chega uma notificação na hora.</li>
+      <li><strong>Teste o aviso agora:</strong> <button id="testar" type="button">Enviar aviso de teste</button><span id="res"></span></li>
+      <li><strong>Espelhamento:</strong> no app <strong>Meta Horizon</strong> do celular ou tablet, use "Transmitir" para ver o que o cliente vê. Também funciona com TV ou Chromecast na mesma rede Wi-Fi.</li>
+      <li><strong>Mais de um óculos:</strong> abra a experiência com <code>?estacao=2</code> no fim do endereço para os avisos dizerem de qual estação vieram.</li>
+      <li><strong>ZapSign:</strong> deixe o modelo de contrato aberto no tablet. Ao receber o aviso, preencha os dados do cliente e entregue o tablet para ele assinar.</li>
+    </ol>
+  </div>
+
+  <h2>Com o cliente</h2>
+  <div class="card">
+    <ol>
+      <li>Ajuste o óculos no cliente, em pé, com espaço livre em volta (ele vai se virar).</li>
+      <li>No navegador do Quest, toque em <strong>Entrar no óculos</strong>. Ele começa vendo o estande, com o logo da E3 flutuando.</li>
+      <li>Entregue o controle direito. Se ele preferir, também dá para usar só as mãos (pinça) ou só o olhar (olhar fixo por 1 segundo).</li>
+      <li>Ao tirar o óculos, a experiência volta sozinha ao início para o próximo visitante.</li>
+    </ol>
+  </div>
+
+  <h2>Cena por cena</h2>
+  <div id="cenas"></div>
+
+  <h2>Atalhos no computador (ensaio)</h2>
+  <div class="card">
+    <p><kbd>Espaço</kbd> avança · <kbd>←</kbd> volta · <kbd>T</kbd> vira para a luz · <kbd>N</kbd> liga ou desliga a narração · <kbd>F</kbd> encerra · <kbd>R</kbd> reinicia · arraste para olhar em volta.</p>
+    <p>Para ensaiar uma cena específica: <code>?cena=5</code> abre direto na jornada.</p>
+  </div>
+  <p><a href="index.html">← Voltar para a experiência</a></p>
+</main>
+
+<script type="module">
+  import { CONFIG } from './js/conteudo.js';
+  const ROTEIRO = [
+    ['Sala real', 'O estande com o logo da E3 flutuando e o botão Começar.',
+      'Bem-vindo! Você vai ver o caminho de um escritório do escuro até o resultado. Toque em Começar.', 'Hoje, de onde vêm os clientes do seu escritório?'],
+    ['Escritório sem método', 'O estande se dissolve. À frente, um advogado de cabeça baixa, agenda vazia, gráfico caindo e frases como "sem resultado".',
+      'Esse é o escritório que depende de indicação e não sabe de onde vem o próximo cliente.', 'Você se reconhece em alguma dessas frases?'],
+    ['Vire-se', 'Um som vem de trás e aparece "Vire-se". Quando ele se vira, a luz da E3 acende.',
+      'Agora vire para trás: ali está a E3.', 'Se ele não conseguir se virar, ele pode tocar em "Virar para a luz".'],
+    ['Do escuro ao resultado', 'Logo, números da E3 e as dicas "Depoimentos" (à direita) e "Resultados" (à esquerda).',
+      'Mais de mil escritórios atendidos e mais de R$ 200 milhões em honorários. Olhe para os lados.', 'Qual desses números mais chama a sua atenção?'],
+    ['Método CPP', 'Três pilares 3D: Aquisição, Produto jurídico e Comercial. Ele pode pegar cada um.',
+      'Tudo começa por três alavancas. Pegue um pilar.', 'Qual dessas três alavancas está mais fraca hoje no seu escritório?'],
+    ['Como você entra', 'Quatro portais em túnel: consultoria, plano, contrato e onboarding.',
+      'Entrar na E3 é simples, e a primeira etapa acontece aqui mesmo, hoje.', 'Faz sentido a gente fazer essa consultoria agora?'],
+    ['O que você recebe', 'Seis módulos: mídia paga, CRM, landing page, vendas, IA e criativos.',
+      'É um time completo, não um serviço avulso.', 'Hoje, quem cuida de cada uma dessas partes no seu escritório?'],
+    ['Diagnóstico', 'Três perguntas: área, de onde vêm os clientes e maior desafio. Mostra o programa recomendado.',
+      'Responda e veja por onde o seu escritório deve começar.', 'Anote o desafio que ele escolheu: é o gancho da proposta.'],
+    ['Sua jornada', 'Espiral de luz com as etapas do programa, semana a semana. Ele pode trocar de programa.',
+      'Cada etapa é um degrau até a luz. Esse é o cronograma real do programa.', 'Qual etapa você quer ver acontecendo primeiro?'],
+    ['Acompanhamento', 'Itens orbitando: reuniões, relatórios, campanhas otimizadas, CRM com IA, treinamento e grupo no WhatsApp.',
+      'A jornada não termina no onboarding: o time acompanha os números com você.', ''],
+    ['Simulador', 'Funil 3D com contatos, qualificados, atendimentos e contratos. Ele ajusta o investimento mensal.',
+      'Os números são ilustrativos, para visualizar o caminho do anúncio até o contrato.', 'Quanto você investe hoje em anúncios?'],
+    ['Próximo passo', 'Dois botões: "Assinar contrato" e "Falar com atendente". Você recebe o aviso no celular.',
+      'Se fizer sentido, a gente já prepara o contrato agora, no tablet.', 'Ao receber o aviso: abra o modelo no ZapSign e leve o tablet até ele.'],
+  ];
+  document.getElementById('topico').textContent = CONFIG.ntfyTopico;
+  const box = document.getElementById('cenas');
+  ROTEIRO.forEach(([t, ve, fala, perg], i) => {
+    const d = document.createElement('div');
+    d.className = 'card cena';
+    d.innerHTML = `<div class="n">${i + 1}</div><div><h3></h3><p class="ve"></p><p class="fala"></p>${perg ? '<p class="perg"></p>' : ''}</div>`;
+    d.querySelector('h3').textContent = t;
+    d.querySelector('.ve').textContent = 'O cliente vê: ' + ve;
+    d.querySelector('.fala').textContent = fala;
+    if (perg) d.querySelector('.perg').textContent = 'Pergunte: ' + perg;
+    box.appendChild(d);
+  });
+  document.getElementById('testar').addEventListener('click', async () => {
+    const res = document.getElementById('res');
+    res.textContent = 'Enviando…';
+    try {
+      const r = await fetch(`https://ntfy.sh/${encodeURIComponent(CONFIG.ntfyTopico)}`, { method: 'POST', body: 'Teste: os avisos do óculos estão chegando.', headers: { Title: 'E3 VR - Teste' } });
+      res.textContent = r.ok ? 'Enviado. Confira o celular.' : 'Falhou (' + r.status + ').';
+    } catch (e) { res.textContent = 'Sem conexão com o ntfy.'; }
+  });
+</script>
+</body>
+</html>

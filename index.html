@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>E3 Company · Experiência VR</title>
+<link rel="icon" href="media/logo-e3.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,24 +12,21 @@
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
 </script>
 <style>
-  :root { --bg:#070502; --orange:#FF5F1F; --yellow:#FFEC00; --text:#ECECEC; --mute:#A39E97; }
+  :root { --bg:#070502; --orange:#FF5F1F; --yellow:#FFEC00; --text:#ECECEC; --mute:#A9A39C; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--text); overflow:hidden;
     font-family:"Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
   canvas { display:block; touch-action:none; }
-
   #intro { position:fixed; inset:0; display:grid; place-items:center; padding:24px;
-    background:radial-gradient(120% 90% at 50% 40%, rgba(7,5,2,.55), rgba(7,5,2,.92));
+    background:radial-gradient(120% 90% at 50% 40%, rgba(7,5,2,.6), rgba(7,5,2,.95));
     backdrop-filter:blur(6px); transition:opacity .5s ease, visibility .5s; z-index:5; }
   #intro.off { opacity:0; visibility:hidden; pointer-events:none; }
   .box { max-width:560px; text-align:center; }
-  .logo { font-family:"Archivo", system-ui, sans-serif; font-weight:800; font-size:22px; letter-spacing:.02em; }
-  .logo b { color:var(--orange); }
-  .logo span { letter-spacing:.22em; font-weight:700; font-size:15px; margin-left:8px; }
-  .eyebrow { margin:28px 0 12px; font-size:12px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--orange); }
+  .logo { width:84px; height:auto; }
+  .eyebrow { margin:22px 0 12px; font-size:12px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--orange); }
   h1 { font-family:"Archivo", system-ui, sans-serif; font-weight:700; font-size:clamp(28px, 5vw, 42px); line-height:1.1; margin:0 0 14px; text-wrap:balance; }
   h1 em { font-style:normal; color:var(--orange); }
-  p { color:var(--mute); line-height:1.55; margin:0 0 28px; text-wrap:pretty; }
+  p { color:var(--mute); line-height:1.55; margin:0 0 26px; text-wrap:pretty; }
   .row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
   button { font:inherit; font-weight:700; font-size:16px; border-radius:999px; padding:14px 26px; cursor:pointer;
     transition:transform .15s ease, background .15s ease, border-color .15s ease; }
@@ -37,35 +35,42 @@
   .pri:hover { background:#fff36b; }
   .sec { background:transparent; color:var(--text); border:1px solid rgba(255,95,31,.7); }
   .sec:hover { border-color:var(--orange); background:rgba(255,95,31,.08); }
-  button:focus-visible { outline:2px solid var(--yellow); outline-offset:3px; }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--yellow); outline-offset:3px; }
   [hidden] { display:none !important; }
-  #status { margin-top:20px; font-size:13px; color:var(--mute); min-height:1.4em; }
-
+  .opcoes { margin-top:22px; display:flex; gap:18px; justify-content:center; flex-wrap:wrap; font-size:14px; color:var(--mute); }
+  .opcoes label { display:inline-flex; gap:8px; align-items:center; cursor:pointer; }
+  .opcoes input { width:18px; height:18px; accent-color:var(--orange); }
+  #status { margin-top:16px; font-size:13px; color:var(--mute); min-height:1.4em; }
   #hud { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-between; align-items:center;
     gap:12px; padding:14px 18px; pointer-events:none; z-index:4; font-size:13px; color:var(--mute); }
   #hud button { pointer-events:auto; font-size:13px; padding:9px 16px; }
   #hud.off { display:none; }
+  @media (max-width: 600px) { #hud span { display:none; } }
 </style>
 </head>
 <body>
 
 <div id="intro">
   <div class="box">
-    <div class="logo"><b>E3</b><span>COMPANY</span></div>
-    <div class="eyebrow">Experiência imersiva</div>
-    <h1>Conheça por dentro a estrutura que <em>escala a receita</em> do seu escritório.</h1>
-    <p>Uma jornada de cerca de três minutos pelo método e pelo time da E3. Aponte, clique e explore.</p>
+    <img class="logo" src="media/logo-e3.png" alt="E3 Company">
+    <div class="eyebrow">Experiência imersiva · <span id="estacao"></span></div>
+    <h1>Do escuro ao <em>resultado previsível.</em></h1>
+    <p>Coloque o óculos no visitante e toque em "Entrar no óculos". Ele começa vendo o estande, e a experiência o leva até a luz da E3.</p>
     <div class="row">
-      <button class="pri" id="entrarVR" hidden>Entrar em VR</button>
-      <button class="sec" id="entrarTela">Explorar nesta tela</button>
+      <button class="pri" id="entrarVR" hidden>Entrar no óculos</button>
+      <button class="sec" id="entrarTela">Ensaiar nesta tela</button>
+    </div>
+    <div class="opcoes">
+      <label><input type="checkbox" id="narracao" checked> Narração automática</label>
+      <a href="closer.html" style="color:var(--orange)">Roteiro do closer</a>
     </div>
     <div id="status">Carregando…</div>
   </div>
 </div>
 
 <div id="hud" class="off">
-  <span id="dica">Arraste para olhar · Clique para interagir · Setas do teclado avançam</span>
-  <button class="pri" id="vrHud" hidden>Entrar em VR</button>
+  <span>Arraste para olhar · Clique para interagir · Espaço avança · T vira para a luz · N liga/desliga a voz · R reinicia</span>
+  <button class="pri" id="vrHud" hidden>Entrar no óculos</button>
 </div>
 
 <script type="module" src="js/app.js"></script>
