@@ -32,6 +32,7 @@
     transition:transform .15s ease, background .15s ease, border-color .15s ease; }
   button:active { transform:scale(.97); }
   .pri { background:var(--yellow); color:#0D0900; border:1px solid var(--yellow); }
+  #entrarVR { font-size:19px; padding:18px 34px; letter-spacing:.01em; box-shadow:0 0 40px rgba(255,236,0,.25); }
   .pri:hover { background:#fff36b; }
   .sec { background:transparent; color:var(--text); border:1px solid rgba(255,95,31,.7); }
   .sec:hover { border-color:var(--orange); background:rgba(255,95,31,.08); }
@@ -55,10 +56,9 @@
     <img class="logo" src="media/logo-e3.png" alt="E3 Company">
     <div class="eyebrow">Experiência imersiva · <span id="estacao"></span></div>
     <h1>Do escuro ao <em>resultado previsível.</em></h1>
-    <p>Coloque o óculos no visitante e toque em "Entrar no óculos". Ele começa vendo o estande, e a experiência o leva até a luz da E3.</p>
+    <p>Coloque o óculos no visitante e toque no botão abaixo. Ele começa vendo o estande, e a experiência o leva até a luz da E3.</p>
     <div class="row">
-      <button class="pri" id="entrarVR" hidden>Entrar no óculos</button>
-      <button class="sec" id="entrarTela">Ensaiar nesta tela</button>
+      <button class="pri" id="entrarVR">Entrar no mundo da E3</button>
     </div>
     <div class="opcoes">
       <label><input type="checkbox" id="narracao" checked> Narração automática</label>
@@ -70,7 +70,7 @@
 
 <div id="hud" class="off">
   <span>Arraste para olhar · Clique para interagir · Espaço avança · T vira para a luz · N liga/desliga a voz · R reinicia</span>
-  <button class="pri" id="vrHud" hidden>Entrar no óculos</button>
+  <button class="pri" id="vrHud" hidden>Entrar no mundo da E3</button>
 </div>
 
 <script type="module" src="js/app.js"></script>

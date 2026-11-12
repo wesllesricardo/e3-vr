@@ -56,7 +56,7 @@ function mostrarIntro() {
   });
   place(p, 0, 1.55, 2.2);
   introGrp.add(p);
-  const comecar = botao(0.7, 0.2, I.botao, () => iniciarJornada(), { primary: true });
+  const comecar = botao(0.95, 0.2, I.botao, () => iniciarJornada(), { primary: true });
   place(comecar, 0, 1.05, 2.1);
   introGrp.add(comecar);
   const voz = botao(0.5, 0.13, vozLabel(), () => { alternarVoz(); setLabel(voz, vozLabel()); });
@@ -271,7 +271,7 @@ function encerrar() {
   fimGrp.add(p);
   reveal(p, { delay: 1.5 });
 }
-function resetar() {
+function resetar({ fala = true } = {}) {
   pararNarracao();
   pararVideos();
   ativarDepoimentos(false);
@@ -288,7 +288,7 @@ function resetar() {
   setFase('intro');
   alinharMundo();
   mostrarIntro();
-  if (audio.pronto) narrar('intro');
+  if (fala && audio.pronto) narrar('intro');
   tocou();
 }
 
@@ -307,7 +307,7 @@ async function entrarXR() {
     iniciarAudio();
     await renderer.xr.setSession(session);
     esconderTela();
-    setTimeout(resetar, 400);
+    setTimeout(() => { resetar({ fala: false }); depois(2.2, iniciarJornada); }, 400);
   } catch (err) {
     status('Não foi possível entrar no modo imersivo: ' + (err && err.message ? err.message : err));
   }
@@ -326,8 +326,14 @@ function esconderTela() {
   $('intro').classList.add('off');
   $('hud').classList.remove('off');
 }
-$('entrarTela').addEventListener('click', () => { iniciarAudio(); esconderTela(); });
-$('entrarVR').addEventListener('click', entrarXR);
+let temXR = false;
+$('entrarVR').addEventListener('click', () => {
+  if (temXR) return entrarXR();
+  iniciarAudio();
+  esconderTela();
+  resetar({ fala: false });
+  depois(1.6, iniciarJornada);
+});
 $('vrHud').addEventListener('click', entrarXR);
 $('narracao').addEventListener('change', e => aplicarVoz(e.target.checked));
 {
@@ -339,9 +345,9 @@ $('estacao').textContent = ESTACAO;
 
 if (navigator.xr && navigator.xr.isSessionSupported) {
   navigator.xr.isSessionSupported('immersive-vr').then(ok => {
-    $('entrarVR').hidden = !ok;
+    temXR = ok;
     $('vrHud').hidden = !ok;
-    status(ok ? 'Óculos detectado. Toque em "Entrar no óculos".' : 'Modo tela, para ensaio. Abra este endereço no navegador do Quest para a versão imersiva.');
+    status(ok ? 'Óculos detectado.' : 'Modo tela, para ensaio. No Quest, este mesmo botão abre a versão imersiva.');
   }).catch(() => status('Modo tela.'));
 } else {
   status('Modo tela, para ensaio. Abra este endereço no navegador do Quest para a versão imersiva.');

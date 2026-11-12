@@ -2,7 +2,7 @@
 // ("E três", "cê erre eme"). Depois de editar, rode: node tools/gerar-narracao.mjs
 export const VOZ = 'pf_dora';
 export const NARRACAO = {
-  intro: 'Olá! Bem-vindo à E três Company. Em poucos minutos, você vai ver, ao seu redor, o caminho de um escritório de advocacia até o resultado previsível. Quando estiver pronto, toque em Começar.',
+  intro: 'Olá! Bem-vindo à E três Company. Em poucos minutos, você vai ver, ao seu redor, o caminho de um escritório de advocacia até o resultado previsível. Quando estiver pronto, toque em Entrar no mundo da E três.',
   escuro: 'Este é o escritório que vive no escuro. Depende de indicação e não sabe de onde vem o próximo cliente. Investe em anúncios que não viram contrato, e perde no WhatsApp os contatos que chegam. Sem tráfego. Sem acompanhamento. Sem resultado.',
   vire: 'Mas existe outro caminho. Vire-se: a E três está atrás de você.',
   luz: 'Esta é a E três Company. Uma agência cem por cento dedicada à advocacia, com mais de mil escritórios atendidos e mais de duzentos milhões de reais em honorários gerados. À sua direita, nossos clientes contam como foi. À sua esquerda, os resultados que eles alcançaram.',

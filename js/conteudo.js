@@ -23,7 +23,7 @@ export const CONTEUDO = {
     eyebrow: 'Experiência imersiva',
     titulo: 'Bem-vindo à *E3 Company.*',
     texto: 'Em poucos minutos, você vai ver ao seu redor o caminho de um escritório que vive no escuro até um escritório com resultado previsível.',
-    botao: 'Começar',
+    botao: 'Entrar no mundo da E3',
   },
 
   escuro: {
