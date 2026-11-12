@@ -232,7 +232,16 @@ Object.assign(app, {
 // ------------------------------------------------------- aviso ao closer ---
 async function avisarCloser(tipo) {
   const assinar = tipo === 'assinar';
-  const corpo = `${ESTACAO}: o cliente quer ${assinar ? 'ASSINAR O CONTRATO' : 'FALAR COM UM ATENDENTE'} agora.`;
+  // Junta o que o cliente respondeu no diagnóstico (nenhum dado pessoal) para o closer já chegar com o contrato certo.
+  const r = app.estado.respostas || {};
+  const prog = K.programas.find(p => p.id === app.estado.programa);
+  const extras = [
+    prog && `Programa sugerido: ${prog.nome} (${prog.duracao})`,
+    r.area && `Área: ${r.area}`,
+    r.canal && `Clientes vêm de: ${r.canal}`,
+    r.desafio && `Desafio: ${r.desafio}`,
+  ].filter(Boolean);
+  const corpo = `${ESTACAO}: o cliente quer ${assinar ? 'ASSINAR O CONTRATO' : 'FALAR COM UM ATENDENTE'} agora.` + (extras.length ? '\n' + extras.join('\n') : '');
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 6000);
   try {

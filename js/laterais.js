@@ -4,7 +4,7 @@
 // =============================================================================
 import {
   THREE, DEG, ORG, YEL, COL, F_HEAD, F_BODY, DIREITA, ESQUERDA, panel, rich, eyebrow, cardBg, fitFont, card,
-  place, glow, tw, E, reveal, setAlpha, op, clamp, lerp, clicavel, estaOlhando, addUpdater, S,
+  place, glow, tw, E, reveal, setAlpha, op, clamp, lerp, clicavel, estaOlhando, addUpdater, S, pill,
 } from './motor.js';
 import { CONTEUDO as K, CONFIG } from './conteudo.js';
 import { somEspacialVideo, moverSomVideo, duckVideo, sfx } from './audio.js';
@@ -23,7 +23,7 @@ function cabecalho(grupo, eb, titulo, dica) {
 }
 
 // ============================================================ depoimentos ===
-const dep = { grupo: null, telas: [], ativo: false, idx: 0, foco: null, ultimoGiro: 0, n: 0 };
+const dep = { grupo: null, telas: [], ativo: false, base: 0, foco: null, ultimoGiro: 0, n: 0, girando: false, contador: null };
 const PASSO = 19, RD = 2.6, WV = 0.5, HV = 0.89;
 
 function texturaPlaceholder(nome) {
@@ -60,8 +60,11 @@ function criarTela() {
   tela.position.z = 0.002;
   g.add(tela);
   const t = { g, moldura, tela, video, vtex, item: null, poster: null, pronto: false, slot: 0 };
-  video.addEventListener('playing', () => { if (t.item) { tela.material.map = vtex; tela.material.needsUpdate = true; t.pronto = true; } });
-  video.addEventListener('ended', () => { if (dep.foco === t) desfocar(); });
+  // só troca o pôster pelo vídeo quando já existe um quadro de verdade (evita tela branca)
+  video.addEventListener('timeupdate', () => {
+    if (t.item && !t.pronto && video.currentTime > 0.05 && video.readyState >= 2) { tela.material.map = vtex; tela.material.needsUpdate = true; t.pronto = true; }
+  });
+  video.addEventListener('ended', () => { if (dep.foco === t) { desfocar(); dep.ultimoGiro = S.T - 6; } });
   video.addEventListener('error', () => { t.pronto = false; });
   tela.userData.video = null;  // não pausar ao destruir: as telas vivem a sessão toda
   clicavel(tela, () => (dep.foco === t ? desfocar() : focar(t)));
@@ -101,25 +104,38 @@ export function criarDepoimentos() {
   DIREITA.add(g);
   dep.grupo = g;
   dep.n = K.depoimentos.videos.length;
+  dep.base = 0;              // vídeo que está no centro
   cabecalho(g, K.depoimentos.eyebrow, K.depoimentos.titulo, K.depoimentos.dica);
   for (let i = 0; i < 4; i++) {
     const t = criarTela();
-    t.slot = i - 1;      // -1, 0, 1 visíveis; 2 entra pela direita
+    t.slot = i - 1;          // -1, 0, 1 visíveis; o quarto fica escondido para entrar
     g.add(t.g);
     dep.telas.push(t);
     posicionar(t, t.slot);
   }
+  // botões grandes para passar os depoimentos
+  const ant = card(0.62, 0.2, (ctx, W, H) => pill(ctx, W, H, '‹  Anterior', { size: 7.4 }), {}, () => girar(-1, true));
+  const prox = card(0.62, 0.2, (ctx, W, H) => pill(ctx, W, H, 'Próximo  ›', { primary: true, size: 7.4 }), {}, () => girar(1, true));
+  dep.contador = panel(0.4, 0.1, (ctx, W, H, st) => {
+    ctx.font = `600 5px ${F_BODY}`; ctx.fillStyle = COL.mute; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${st.i + 1} de ${st.n}`, W / 2, H / 2);
+  }, { i: 0, n: dep.n });
+  place(ant, -15, 0.84, 2.45);
+  place(prox, 15, 0.84, 2.45);
+  place(dep.contador, 0, 0.84, 2.45);
+  g.add(ant, prox, dep.contador);
   g.visible = false;
   return g;
 }
+
+function itemDoSlot(slot) { return K.depoimentos.videos[((dep.base + slot) % dep.n + dep.n) % dep.n]; }
 
 export function ativarDepoimentos(on) {
   dep.ativo = on;
   if (!dep.grupo) return;
   if (on) {
     dep.grupo.visible = true;
-    if (!dep.telas[0].item) dep.telas.forEach((t, i) => carregarItem(t, K.depoimentos.videos[i % dep.n]));
-    dep.idx = 4;
+    dep.telas.forEach(t => { if (Math.abs(t.slot) <= 1 && t.item !== itemDoSlot(t.slot)) carregarItem(t, itemDoSlot(t.slot)); });
     dep.telas.forEach(t => { if (Math.abs(t.slot) <= 1) t.video.play().catch(() => {}); });
     reveal(dep.grupo, { dy: 0.2, dur: 1.2 });
     dep.ultimoGiro = S.T;
@@ -130,22 +146,33 @@ export function ativarDepoimentos(on) {
   }
 }
 
-function girar() {
-  dep.ultimoGiro = S.T;
+// dir = 1 avança (os vídeos andam para a esquerda), dir = -1 volta
+function girar(dir = 1, manual = false) {
+  if (dep.girando) return;
+  if (dep.foco) desfocar();
+  dep.girando = true;
+  // depois de um toque, espera mais antes de voltar a girar sozinho
+  dep.ultimoGiro = S.T + (manual ? 12 : 0);
   const telas = dep.telas;
-  tw(1.3, k => telas.forEach(t => posicionar(t, t.slot - k)), {
+  const reserva = telas.find(t => Math.abs(t.slot) > 1);
+  reserva.slot = dir > 0 ? 2 : -2;
+  reserva.video.pause();
+  carregarItem(reserva, itemDoSlot(reserva.slot));
+  reserva.video.pause();
+  posicionar(reserva, reserva.slot);
+  telas.forEach(t => { t.slot0 = t.slot; });
+  tw(manual ? 0.8 : 1.3, k => telas.forEach(t => posicionar(t, t.slot0 - dir * k)), {
     ease: E.inOut,
     done: () => {
-      telas.forEach(t => { t.slot -= 1; });
-      const saiu = telas.find(t => t.slot < -1);
-      if (saiu) {
-        saiu.slot = 2;
-        saiu.video.pause();
-        carregarItem(saiu, K.depoimentos.videos[dep.idx % dep.n]);
-        dep.idx++;
-        saiu.video.pause();
-      }
-      telas.forEach(t => { posicionar(t, t.slot); if (t.slot === 1) t.video.play().catch(() => {}); });
+      telas.forEach(t => {
+        t.slot = t.slot0 - dir;
+        posicionar(t, t.slot);
+        if (Math.abs(t.slot) <= 1) t.video.play().catch(() => {}); else t.video.pause();
+      });
+      dep.base = ((dep.base + dir) % dep.n + dep.n) % dep.n;
+      dep.contador.userData.state.i = dep.base;
+      dep.contador.userData.redraw();
+      dep.girando = false;
     },
   });
 }
@@ -225,10 +252,10 @@ function cardCase(c, i, n) {
   return m;
 }
 
-function mostrarCase(i) {
+function mostrarCase(i, manual = false) {
   const lista = K.cases.lista;
   cs.idx = (i + lista.length) % lista.length;
-  cs.ultimo = S.T;
+  cs.ultimo = S.T + (manual ? 10 : 0);   // depois de um toque, espera mais para trocar sozinho
   if (cs.atual) {
     const velho = cs.atual;
     tw(0.5, k => { setAlpha(velho, 1 - k); velho.position.x = -0.3 * k; }, { done: () => { velho.parent && velho.parent.remove(velho); velho.material.map.dispose(); velho.material.dispose(); velho.geometry.dispose(); } });
@@ -268,19 +295,22 @@ export function criarCases() {
   g.add(holder);
   cs.holder = holder;
   const n = K.cases.lista.length;
-  cs.chips = card(1.7, 0.16, (ctx, W, H, s) => {
-    const w = 18, gap = 4, total = n * w + (n - 1) * gap;
+  cs.chips = card(0.8, 0.08, (ctx, W, H, s) => {
+    const w = 8, gap = 3, total = n * w + (n - 1) * gap;
     let x = (W - total) / 2;
     for (let i = 0; i < n; i++) {
       ctx.beginPath(); ctx.roundRect(x, H / 2 - 1, w, 2, 1);
       ctx.fillStyle = i === s.i ? COL.orange : 'rgba(255,255,255,0.2)'; ctx.fill();
       x += w + gap;
     }
-    ctx.fillStyle = COL.mute; ctx.font = `600 3.8px ${F_BODY}`; ctx.textAlign = 'right';
-    ctx.fillText('Próximo ›', W - 2, H / 2 - 2);
-  }, { i: 0 }, () => mostrarCase(cs.idx + 1));
-  place(cs.chips, 0, 0.85, 2.6);
+  }, { i: 0 });
+  place(cs.chips, 0, 0.86, 2.6);
   g.add(cs.chips);
+  const ant = card(0.5, 0.2, (ctx, W, H) => pill(ctx, W, H, '‹  Anterior', { size: 7.4 }), {}, () => mostrarCase(cs.idx - 1, true));
+  const prox = card(0.62, 0.2, (ctx, W, H) => pill(ctx, W, H, 'Próximo case  ›', { primary: true, size: 7.4 }), {}, () => mostrarCase(cs.idx + 1, true));
+  place(ant, -14, 0.86, 2.45);
+  place(prox, 15, 0.86, 2.45);
+  g.add(ant, prox);
   addUpdater(null, () => {
     if (cs.ativo && S.T - cs.ultimo > DUR_CASE) mostrarCase(cs.idx + 1);
   });
@@ -297,5 +327,5 @@ export function ativarCases(on) {
 // chamado a cada quadro
 export function updateLaterais() {
   if (!dep.ativo) return;
-  if (!dep.foco && S.T - dep.ultimoGiro > 9) girar();
+  if (!dep.foco && !dep.girando && S.T - dep.ultimoGiro > 9) girar(1);
 }
