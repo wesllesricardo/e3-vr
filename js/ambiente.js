@@ -11,7 +11,7 @@ import {
 import { CONTEUDO as K } from './conteudo.js';
 import { audio } from './audio.js';
 
-export const amb = { prog: 0, luz: 0 };
+export const amb = { prog: 0, luz: 0, semFrio: false };   // semFrio: esconde o lado sombrio (usado no jogo)
 const v3 = new THREE.Vector3();
 
 // ------------------------------------------------------------------ cúpula ---
@@ -305,7 +305,7 @@ export function aplicar() {
   sol.intensity = 2.4 * l * p;
   hemi.intensity = 0.25 + 0.75 * p;
   scene.fog.color.copy(corFrio).lerp(corQuente, l);
-  frio.visible = p > 0.01;
+  frio.visible = p > 0.01 && !amb.semFrio;
   luzGrp.visible = p > 0.01;
 }
 export function setProg(k) { amb.prog = k; aplicar(); }
