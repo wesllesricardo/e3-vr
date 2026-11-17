@@ -455,7 +455,8 @@ async function entrarXR() {
     esconderTela();
     const ref = renderer.xr.getReferenceSpace();
     if (ref) ref.addEventListener('reset', () => quandoPoseValida(realinhar));
-    quandoPoseValida(() => { resetar({ fala: false }); depois(2.2, iniciarJornada); });
+    // entra no modo imersivo e espera o visitante tocar em "Entrar no mundo da E3" (no ar)
+    quandoPoseValida(() => resetar());
   } catch (err) {
     status('Não foi possível entrar no modo imersivo: ' + (err && err.message ? err.message : err));
   }
@@ -494,8 +495,7 @@ $('entrarVR').addEventListener('click', () => {
   if (temXR) return entrarXR();
   iniciarAudio();
   esconderTela();
-  resetar({ fala: false });
-  depois(1.6, iniciarJornada);
+  resetar();
 });
 $('vrHud').addEventListener('click', entrarXR);
 $('resetHud').addEventListener('click', () => voltarAoInicio());
