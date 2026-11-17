@@ -11,7 +11,7 @@ import {
   addUpdater, click, ctrls,
 } from './motor.js';
 import { CONTEUDO as K, CONFIG } from './conteudo.js';
-import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNarracaoAtiva, audio } from './audio.js';
+import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNarracaoAtiva, audio, duracaoFala } from './audio.js';
 import { amb, setProg, setLuz, updateAmbiente, carregarLogo, direcaoLuz, posicaoChamado, flashLuz, girarNucleo } from './ambiente.js';
 import { criarDepoimentos, ativarDepoimentos, criarCases, ativarCases, updateLaterais, pararVideos } from './laterais.js';
 import { CENAS } from './cenas.js';
@@ -112,6 +112,58 @@ function aplicarVoz(v) {
 function alternarVoz() { aplicarVoz(!audio.narracaoAtiva); }
 
 // --------------------------------------------------------- escuro → luz ---
+// --------------------------------------------------------------- contagem ---
+// No alto do lado sombrio: quanto falta para o visitante se virar e ver a E3.
+let contagemGrp = null;
+function mostrarContagem(seg, aoZerar) {
+  if (contagemGrp) kill(contagemGrp);
+  contagemGrp = new THREE.Group();
+  TRAS.add(contagemGrp);
+  const st = { resta: Math.ceil(seg), frac: 1, agora: false };
+  const p = panel(1.7, 0.42, (ctx, W, H, s) => {
+    cardBg(ctx, W, H, { r: 7 });
+    eyebrow(ctx, K.escuro.contagemTopo, 0, 7, W, { align: 'center' });
+    ctx.textBaseline = 'middle';
+    if (s.agora) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COL.yellow; ctx.font = `800 13px ${F_HEAD}`;
+      ctx.fillText(K.escuro.contagemAgora, W / 2, 21.5);
+    } else {
+      const a = `${K.escuro.contagemTexto} `, b = `${s.resta} s`;
+      ctx.font = `700 11px ${F_HEAD}`;
+      const wa = ctx.measureText(a).width;
+      ctx.font = `800 13px ${F_HEAD}`;
+      const wb = ctx.measureText(b).width, x0 = (W - wa - wb) / 2;
+      ctx.textAlign = 'left';
+      ctx.font = `700 11px ${F_HEAD}`; ctx.fillStyle = COL.text; ctx.fillText(a, x0, 21.5);
+      ctx.font = `800 13px ${F_HEAD}`; ctx.fillStyle = COL.orange; ctx.fillText(b, x0 + wa, 21.5);
+    }
+    // barra do tempo restante
+    const bw = W - 40, bx = 20, by = H - 7;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, 1.8, 0.9); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+    ctx.beginPath(); ctx.roundRect(bx, by, Math.max(1.8, bw * s.frac), 1.8, 0.9); ctx.fillStyle = s.agora ? COL.yellow : COL.orange; ctx.fill();
+  }, st);
+  place(p, 0, 2.75, 2.6);
+  p.rotation.x = 0.4;
+  contagemGrp.add(p);
+  reveal(p);
+  let zerou = false;
+  addUpdater(contagemGrp, t => {
+    const resta = Math.max(0, seg - t);
+    if (!zerou) {
+      const r = Math.ceil(resta), f = resta / seg;
+      if (r !== st.resta || Math.abs(f - st.frac) > 0.02) {
+        if (r !== st.resta && r > 0 && r <= 3) sfx('tick');
+        st.resta = r; st.frac = f; p.userData.redraw();
+      }
+      if (resta <= 0) { zerou = true; st.agora = true; st.frac = 1; p.userData.redraw(); if (aoZerar) aoZerar(); }
+    } else {
+      p.scale.setScalar(1 + 0.04 * Math.sin(t * 6));
+    }
+  });
+}
+function esconderContagem() { if (contagemGrp) { leave(contagemGrp, 0.4); contagemGrp = null; } }
+
 function iniciarJornada() {
   if (fase !== 'intro') return;
   setFase('dissolvendo');
@@ -120,9 +172,12 @@ function iniciarJornada() {
   if (introGrp) { leave(introGrp, 0.6); introGrp = null; }
   setHumor('frio', 3.5);
   guia.casa();
+  // a contagem cobre a dissolução, a narração do lado sombrio e uma pequena pausa
+  const fala = audio.narracaoAtiva ? duracaoFala('escuro') : 0;
+  mostrarContagem(3.4 + (fala ? fala + 0.6 : 7), mostrarVire);
   tw(3.4, k => setProg(k), { ease: E.inOut, done: () => {
     setFase('escuro');
-    narrar('escuro', () => depois(audio.narracaoAtiva ? 0.6 : 7, mostrarVire));
+    narrar('escuro');
   } });
 }
 function mostrarVire() {
@@ -178,6 +233,7 @@ function virarParaLuz() {
 function acenderLuz() {
   if (fase !== 'vire') return;
   setFase('luz');
+  esconderContagem();
   pararNarracao();
   if (vireGrp) { leave(vireGrp, 0.5); vireGrp = null; }
   sfx('acender', posicaoChamado(v3));
@@ -226,7 +282,7 @@ function rotularReset(confirma) {
   });
 }
 function pedirReset() {
-  if (S.T < confirmaAte) { confirmaAte = 0; rotularReset(false); resetar(); return; }
+  if (S.T < confirmaAte) { confirmaAte = 0; rotularReset(false); voltarAoInicio(); return; }
   confirmaAte = S.T + 3;
   rotularReset(true);
 }
@@ -245,7 +301,7 @@ function checarBotaoReset(dt) {
   if (!renderer.xr.isPresenting || fase === 'intro') { seguraReset = 0; return; }
   const apertado = ctrls.some(c => { const gp = c.userData.src && c.userData.src.gamepad; return gp && gp.buttons[5] && gp.buttons[5].pressed; });
   seguraReset = apertado ? seguraReset + dt : 0;
-  if (seguraReset > 2) { seguraReset = 0; resetar(); }
+  if (seguraReset > 2) { seguraReset = 0; voltarAoInicio(); }
 }
 const dots = panel(1.2, 0.05, (ctx, W, H, s) => {
   const seg = 6, act = 16, gap = 2.6, total = (s.n - 1) * (seg + gap) + act;
@@ -366,8 +422,8 @@ function resetar({ fala = true } = {}) {
   pararVideos();
   ativarDepoimentos(false);
   ativarCases(false);
-  [current, vireGrp, fimGrp].forEach(g => { if (g) kill(g); });
-  current = vireGrp = fimGrp = null;
+  [current, vireGrp, fimGrp, contagemGrp].forEach(g => { if (g) kill(g); });
+  current = vireGrp = fimGrp = contagemGrp = null;
   idx = -1;
   nav.visible = false;
   setProg(0);
@@ -392,7 +448,7 @@ async function entrarXR() {
     session.addEventListener('visibilitychange', () => {
       // óculos tirado e recolocado: novo visitante
       if (session.visibilityState !== 'visible') hiddenAt = performance.now();
-      else if (hiddenAt && performance.now() - hiddenAt > 6000) { hiddenAt = 0; quandoPoseValida(() => resetar()); }
+      else if (hiddenAt && performance.now() - hiddenAt > 6000) { hiddenAt = 0; voltarAoInicio(); }
     });
     iniciarAudio();
     await renderer.xr.setSession(session);
@@ -405,10 +461,20 @@ async function entrarXR() {
   }
 }
 renderer.xr.addEventListener('sessionend', () => {
+  esperaPose = null;
   view.yaw = view.pitch = view.tyaw = view.tpitch = 0;
   camera.position.set(0, 1.6, 0);
-  setTimeout(resetar, 100);
+  mostrarTelaInicial();
+  setTimeout(() => resetar({ fala: false }), 100);
 });
+// RESETAR: volta para a tela inicial ("Entrar no mundo da E3"); na próxima entrada a
+// experiência recomeça completa (sala, contagem, virada para a luz).
+function voltarAoInicio() {
+  const sessao = renderer.xr.getSession();
+  if (sessao) { sessao.end().catch(() => { mostrarTelaInicial(); resetar({ fala: false }); }); return; }
+  mostrarTelaInicial();
+  resetar({ fala: false });
+}
 
 // -------------------------------------------------------------------- tela ---
 const $ = id => document.getElementById(id);
@@ -417,6 +483,11 @@ function esconderTela() {
   S.iniciou = true;
   $('intro').classList.add('off');
   $('hud').classList.remove('off');
+}
+function mostrarTelaInicial() {
+  S.iniciou = false;
+  $('intro').classList.remove('off');
+  $('hud').classList.add('off');
 }
 let temXR = false;
 $('entrarVR').addEventListener('click', () => {
@@ -427,7 +498,7 @@ $('entrarVR').addEventListener('click', () => {
   depois(1.6, iniciarJornada);
 });
 $('vrHud').addEventListener('click', entrarXR);
-$('resetHud').addEventListener('click', () => resetar());
+$('resetHud').addEventListener('click', () => voltarAoInicio());
 $('narracao').addEventListener('change', e => aplicarVoz(e.target.checked));
 {
   let salvo = null;
@@ -454,7 +525,7 @@ window.addEventListener('keydown', e => {
     else if (fase === 'vire') virarParaLuz();
     else if (fase === 'luz' && btnNext.visible) click(btnNext.userData.mesh);
   } else if (k === 'arrowleft') { if (fase === 'luz' && btnBack.visible) click(btnBack.userData.mesh); }
-  else if (k === 'r') resetar();
+  else if (k === 'r') voltarAoInicio();
   else if (k === 't') virarParaLuz();
   else if (k === 'n') alternarVoz();
   else if (k === 'f') encerrar();
@@ -479,8 +550,8 @@ function sim(dt) {
     if (anguloOlhar(direcaoLuz(v3)) < 40) acenderLuz();
     else if (S.T - ultimoChamado > 3.5) { ultimoChamado = S.T; sfx('chamado', posicaoChamado(v3)); }
   }
-  if (fase === 'luz' && S.T - S.lastInput > CONFIG.ociosoSegundos) resetar();
-  if (fase === 'fim' && tFase > CONFIG.fimSegundos) resetar();
+  if (fase === 'luz' && S.T - S.lastInput > CONFIG.ociosoSegundos) voltarAoInicio();
+  if (fase === 'fim' && tFase > CONFIG.fimSegundos) voltarAoInicio();
 }
 function frame() {
   checarPose();

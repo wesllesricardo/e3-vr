@@ -37,6 +37,9 @@ export const CONTEUDO = {
     celular: '0 novas mensagens',
     vire: 'Existe outro caminho. *Vire-se.*',
     vireSub: 'A E3 está atrás de você.',
+    contagemTopo: 'A apresentação da E3 está atrás de você',
+    contagemTexto: 'Vire-se em',
+    contagemAgora: 'Vire-se agora ↻',
     botaoVirar: 'Virar para a luz',
   },
 

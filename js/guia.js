@@ -6,6 +6,8 @@
 import { THREE, scene, camera, glow, S, clamp, ORG, YEL } from './motor.js';
 import { nivelVoz, setPosVoz, sfx } from './audio.js';
 
+// A luz-guia ficou invisível (pedido do cliente). A lógica segue só para posicionar a voz da narração.
+const MOSTRAR = false;
 const v = new THREE.Vector3(), cam = new THREE.Vector3(), fw = new THREE.Vector3(), dir = new THREE.Vector3();
 const G = {
   grupo: null, nucleo: null, halo: null, brilho: null, faiscas: [], rastro: [], hist: [],
@@ -46,7 +48,7 @@ export const guia = {
     G.alvo = a;
     G.desde = S.T;
     G.foraDeVista = 0;
-    if (a && avisar) sfx('guia', G.pos);
+    if (a && avisar && MOSTRAR) sfx('guia', G.pos);
   },
   casa() { this.alvo(null, { avisar: false }); },
   mostrar(on) { G.visivel = on; },
@@ -85,7 +87,7 @@ export function updateGuia(dt) {
     camera.getWorldDirection(fw);
     dir.copy(destino).sub(cam).normalize();
     G.foraDeVista = fw.dot(dir) < 0.55 ? G.foraDeVista + dt : 0;
-    if (G.foraDeVista > 5 && G.cutucando <= 0) { G.cutucando = 1.8; G.foraDeVista = 0; sfx('guia', G.pos); }
+    if (MOSTRAR && G.foraDeVista > 5 && G.cutucando <= 0) { G.cutucando = 1.8; G.foraDeVista = 0; sfx('guia', G.pos); }
   }
   if (G.cutucando > 0) {
     G.cutucando -= dt;
@@ -118,7 +120,7 @@ export function updateGuia(dt) {
   G.rastro.forEach((r, i) => { const h = G.hist[Math.min(G.hist.length - 1, i * 3)]; if (h) r.position.copy(h); });
   // aparecer / sumir
   G.fade = clamp(G.fade + (G.visivel ? 1 : -1) * dt * 2, 0, 1);
-  G.grupo.visible = G.fade > 0.01;
+  G.grupo.visible = MOSTRAR && G.fade > 0.01;
   G.rastro.forEach(r => { r.visible = G.grupo.visible; });
   G.grupo.scale.setScalar(G.fade);
   setPosVoz(G.pos);
