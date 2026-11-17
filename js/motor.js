@@ -537,7 +537,8 @@ export function updatePointers(dt) {
     camera.getWorldDirection(rd);
     raycaster.set(ro, rd);
     const h = cast();
-    const alvoOk = h && h.object.userData.onClick;
+    // botões marcados com semOlhar só respondem a toque/gatilho (ex.: iniciar a apresentação)
+    const alvoOk = h && h.object.userData.onClick && !h.object.userData.semOlhar;
     if (h) hov.add(h.object);
     if (alvoOk) {
       if (h.object !== gazeAlvo) { gazeAlvo = h.object; gazeT = 0; gazeFeito = false; }

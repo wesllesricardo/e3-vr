@@ -24,6 +24,7 @@ export const CONTEUDO = {
     titulo: 'Bem-vindo à *E3 Company.*',
     texto: 'Em poucos minutos, você vai ver ao seu redor o caminho de um escritório que vive no escuro até um escritório com resultado previsível.',
     botao: 'Entrar no mundo da E3',
+    botaoConfirma: 'Toque de novo para começar',
   },
 
   escuro: {

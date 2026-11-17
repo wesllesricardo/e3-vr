@@ -87,7 +87,18 @@ function mostrarIntro() {
   });
   place(p, 0, 1.55, 2.2);
   introGrp.add(p);
-  const comecar = botao(0.95, 0.2, I.botao, () => iniciarJornada(), { primary: true });
+  // Começar pede confirmação: 1º toque arma, 2º toque (em até 4 s) inicia. Não dispara só
+  // com o olhar, e ignora toques no primeiro segundo depois de entrar no modo imersivo.
+  const desde = S.T;
+  let confirmaInicio = 0;
+  const comecar = botao(1.1, 0.2, I.botao, () => {
+    if (S.T - desde < 1) return;
+    if (S.T < confirmaInicio) { confirmaInicio = 0; iniciarJornada(); return; }
+    confirmaInicio = S.T + 4;
+    setLabel(comecar, I.botaoConfirma);
+    depois(4, () => { if (fase === 'intro' && S.T >= confirmaInicio) setLabel(comecar, I.botao); });
+  }, { primary: true });
+  comecar.userData.mesh.userData.semOlhar = true;
   place(comecar, 0, 1.05, 2.1);
   introGrp.add(comecar);
   guia.mostrar(true);
