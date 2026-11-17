@@ -40,6 +40,32 @@ function depois(seg, fn) { tw(seg, () => {}, { done: fn, ease: E.lin }); }
 // Gira o mundo para o lado sombrio (e a intro) ficarem de frente para o visitante.
 function alinharMundo() { world.rotation.y = yawCabeca() + Math.PI; world.updateMatrixWorld(true); }
 
+// No Quest, os primeiros quadros da sessão imersiva ainda não trazem a posição real
+// da cabeça (e o "chão" do óculos pode ter outra frente). Alinhar nesse instante deixa
+// o mundo girado e o visitante começa olhando para os depoimentos. Por isso esperamos
+// alguns quadros seguidos com a cabeça rastreada antes de alinhar.
+let esperaPose = null;
+function quandoPoseValida(fn) {
+  if (!renderer.xr.isPresenting) { fn(); return; }
+  esperaPose = { fn, ok: 0, t0: performance.now() };
+}
+function checarPose() {
+  if (!esperaPose) return;
+  const f = renderer.xr.getFrame(), ref = renderer.xr.getReferenceSpace();
+  const pose = f && ref ? f.getViewerPose(ref) : null;
+  esperaPose.ok = pose && !pose.emulatedPosition ? esperaPose.ok + 1 : 0;
+  if (esperaPose.ok >= 20 || performance.now() - esperaPose.t0 > 4000) {
+    const { fn } = esperaPose;
+    esperaPose = null;
+    fn();
+  }
+}
+// Visitante recentralizou o óculos (segurar o botão Meta): o conteúdo volta para a frente dele.
+function realinhar() {
+  if (['intro', 'dissolvendo', 'escuro', 'vire'].includes(fase)) alinharMundo();
+  else { world.rotation.y = yawCabeca(); world.updateMatrixWorld(true); }
+}
+
 // ------------------------------------------------------------------- intro ---
 function mostrarIntro() {
   if (introGrp) kill(introGrp);
@@ -366,12 +392,14 @@ async function entrarXR() {
     session.addEventListener('visibilitychange', () => {
       // óculos tirado e recolocado: novo visitante
       if (session.visibilityState !== 'visible') hiddenAt = performance.now();
-      else if (hiddenAt && performance.now() - hiddenAt > 6000) { hiddenAt = 0; resetar(); }
+      else if (hiddenAt && performance.now() - hiddenAt > 6000) { hiddenAt = 0; quandoPoseValida(() => resetar()); }
     });
     iniciarAudio();
     await renderer.xr.setSession(session);
     esconderTela();
-    setTimeout(() => { resetar({ fala: false }); depois(2.2, iniciarJornada); }, 400);
+    const ref = renderer.xr.getReferenceSpace();
+    if (ref) ref.addEventListener('reset', () => quandoPoseValida(realinhar));
+    quandoPoseValida(() => { resetar({ fala: false }); depois(2.2, iniciarJornada); });
   } catch (err) {
     status('Não foi possível entrar no modo imersivo: ' + (err && err.message ? err.message : err));
   }
@@ -455,6 +483,7 @@ function sim(dt) {
   if (fase === 'fim' && tFase > CONFIG.fimSegundos) resetar();
 }
 function frame() {
+  checarPose();
   sim(Math.min(clock.getDelta(), 0.05));
   renderer.render(scene, camera);
 }
