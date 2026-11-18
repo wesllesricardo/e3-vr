@@ -7,7 +7,7 @@ import {
   clicavel, place, mk, disc, glow, tw, E, reveal, leave, setAlpha, op, clamp, lerp, addUpdater, app, camera, S, R,
 } from './motor.js';
 import { CONTEUDO as K } from './conteudo.js';
-import { sfx, narrar } from './audio.js';
+import { sfx, narrar, somEspacialVideo, duckVideo } from './audio.js';
 
 const D = 0.35;
 const v3 = new THREE.Vector3(), v4 = new THREE.Vector3();
@@ -464,7 +464,7 @@ function cenaDiagnostico(g) {
       const c = panel(2.1, 0.92, (ctx, W, H) => {
         cardBg(ctx, W, H, { r: 7, accent: COL.yellow, strong: true });
         eyebrow(ctx, Q.resultadoTitulo, 12, 10, W, { color: COL.yellow });
-        const chips = [resp.area, resp.canal, resp.desafio].filter(Boolean);
+        const chips = [resp.area, resp.desafio].filter(Boolean);
         let x = 12;
         ctx.font = `600 4.2px ${F_BODY}`;
         for (const t of chips) {
@@ -648,140 +648,48 @@ function cenaJornada(g) {
   });
 }
 
-// ===================================================== 6. acompanhamento ===
-function cenaAcompanhamento(g) {
-  const A = K.acompanhamento;
-  heading(g, A.eyebrow, A.titulo, { y: 2.5 });
-  const centro = new THREE.Vector3(0, 1.5, -3.5);
-  const nucleo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 1), matBrilho(ORG, 0.9));
-  nucleo.position.copy(centro);
-  g.add(nucleo);
-  app.guiar(nucleo);
-  const halo = glow(1.4, ORG, 0.5); halo.position.copy(centro); g.add(halo);
-  const orbita = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.006, 6, 120), new THREE.MeshBasicMaterial({ color: ORG, transparent: true, opacity: 0.4 }));
-  orbita.rotation.x = Math.PI / 2; orbita.position.copy(centro); g.add(orbita);
-  const chips = A.itens.map((t, i) => {
-    const p = panel(1.12, 0.2, (ctx, W, H) => pill(ctx, W, H, t, { size: 6.4 }));
-    g.add(p);
-    p.userData.a0 = (i / A.itens.length) * Math.PI * 2;
-    setAlpha(p, 0);
-    tw(0.6, k => setAlpha(p, k), { delay: D + 0.4 + i * 0.1, owner: g });
-    return p;
-  });
-  const txt = panel(2.0, 0.24, (ctx, W, H) => rich(ctx, A.texto, 0, 2, W, 5.4, { color: COL.mute, align: 'center', lh: 1.4 }));
-  place(txt, 0, 2.3, 2.6);
-  g.add(txt);
-  reveal(txt, { delay: D + 0.9, owner: g });
-  addUpdater(g, (t, dt) => {
-    nucleo.rotation.y += dt * 0.8; nucleo.rotation.x += dt * 0.3;
-    camera.getWorldPosition(v3);
-    chips.forEach((p, i) => {
-      const a = p.userData.a0 + t * 0.22;
-      p.position.set(centro.x + Math.sin(a) * 1.45, centro.y + Math.sin(a * 2 + i) * 0.14, centro.z + Math.cos(a) * 1.45);
-      p.parent.localToWorld(v4.copy(p.position));
-      p.lookAt(v3.x, v4.y, v3.z);
-      const frente = (Math.cos(a) + 1) / 2;
-      p.scale.setScalar(0.8 + 0.35 * frente);
-      p.renderOrder = frente > 0.5 ? 3 : 1;
-    });
-  });
-}
-
-// ============================================================ 7. simulador ===
-function cenaSimulador(g) {
-  const Sm = K.simulador;
-  heading(g, Sm.eyebrow, Sm.titulo, { y: 2.55 });
-  const st = { inv: Sm.inicial };
-  const calc = inv => {
-    const contatos = inv / Sm.custoPorContato, q = contatos * Sm.taxaQualificacao, a = q * Sm.taxaAtendimento, c = a * Sm.taxaFechamento;
-    return [contatos, q, a, c].map(Math.round);
-  };
-  // funil 3D
-  const centro = new THREE.Vector3(-0.45, 0, -3.0);
-  const niveis = [2.05, 1.75, 1.45, 1.15], raios = [0.5, 0.38, 0.27, 0.16];
-  const aneis = niveis.map((y, i) => {
-    const a = new THREE.Mesh(new THREE.TorusGeometry(raios[i], 0.012, 8, 64), new THREE.MeshBasicMaterial({ color: i === 3 ? YEL : ORG, transparent: true, opacity: 0.8, toneMapped: false }));
-    a.rotation.x = Math.PI / 2;
-    a.position.set(centro.x, y, centro.z);
-    g.add(a);
-    return a;
-  });
-  const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.16, 0.9, 40, 1, true), new THREE.MeshBasicMaterial({ color: ORG, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
-  cone.position.set(centro.x, 1.6, centro.z);
-  g.add(cone);
-  const gotas = Array.from({ length: 40 }, (_, i) => { const s = glow(0.07, ORG); g.add(s); s.userData.f = Math.random(); s.userData.a = Math.random() * 6.28; return s; });
-  const rotulos = Sm.etapas.map((e, i) => {
-    const p = panel(1.3, 0.24, (ctx, W, H, s) => {
-      ctx.fillStyle = COL.line; ctx.fillRect(0, H / 2, 6, 0.3);
-      ctx.font = `700 5.2px ${F_BODY}`; ctx.fillStyle = COL.mute; ctx.fillText(e.toUpperCase(), 9, 2.5);
-      ctx.font = `800 11px ${F_HEAD}`; ctx.fillStyle = i === 3 ? COL.yellow : COL.text;
-      ctx.fillText(s.v.toLocaleString('pt-BR') + (i === 3 ? ' por mês' : ''), 9, 9.5);
-    }, { v: 0 });
-    p.position.set(centro.x + raios[i] + 0.72, niveis[i], centro.z + 0.02);
-    g.add(p);
-    reveal(p, { delay: D + 0.3 + i * 0.12, owner: g });
-    return p;
-  });
-  // controle deslizante
-  const trilho = panel(1.6, 0.34, (ctx, W, H, s) => {
-    cardBg(ctx, W, H, { r: 5 });
-    ctx.font = `600 4.4px ${F_BODY}`; ctx.fillStyle = COL.mute; ctx.fillText(Sm.rotulo.toUpperCase(), 10, 6);
-    ctx.font = `800 8px ${F_HEAD}`; ctx.fillStyle = COL.text; ctx.textAlign = 'right';
-    ctx.fillText(`R$ ${s.inv.toLocaleString('pt-BR')}`, W - 10, 4.5);
-    ctx.textAlign = 'left';
-    const x0 = 10, x1 = W - 10, y = 23, k = (s.inv - Sm.min) / (Sm.max - Sm.min);
-    ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.roundRect(x0, y - 1, x1 - x0, 2, 1); ctx.fill();
-    const gr = ctx.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, COL.orange); gr.addColorStop(1, COL.yellow);
-    ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(x0, y - 1, (x1 - x0) * k, 2, 1); ctx.fill();
-    ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * k, y, 3.6, 0, 7); ctx.fillStyle = COL.yellow; ctx.fill();
-    ctx.lineWidth = 0.8; ctx.strokeStyle = COL.ink; ctx.stroke();
-  }, st);
-  place(trilho, 0, 1.06, 2.2);
-  g.add(trilho);
-  app.guiar(trilho);
-  reveal(trilho, { delay: D + 0.5, owner: g });
-  const atualizar = () => {
-    trilho.userData.state.inv = st.inv;
-    trilho.userData.redraw();
-    calc(st.inv).forEach((v, i) => { rotulos[i].userData.state.v = v; rotulos[i].userData.redraw(); });
-  };
-  const definir = inv => {
-    const novo = clamp(Math.round(inv / Sm.passo) * Sm.passo, Sm.min, Sm.max);
-    if (novo !== st.inv) { st.inv = novo; atualizar(); sfx('hover'); }
-  };
-  trilho.userData.drag = (p, fase) => {
-    if (!p) return;
-    v3.copy(p); trilho.worldToLocal(v3);
-    const k = clamp((v3.x + 0.7) / 1.4, 0, 1);
-    definir(Sm.min + k * (Sm.max - Sm.min));
-  };
-  const plano = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ visible: false }));
-  plano.position.copy(trilho.position); plano.rotation.copy(trilho.rotation);
-  g.add(plano);
-  trilho.userData.dragPlane = plano;
-  trilho.userData.hoverFn = () => {};
-  clicavel(trilho, () => {});
-  const menos = botao(0.18, 0.14, '−', () => definir(st.inv - Sm.passo * 2));
-  const mais = botao(0.18, 0.14, '+', () => definir(st.inv + Sm.passo * 2));
-  place(menos, -23.5, 1.06, 2.2); place(mais, 23.5, 1.06, 2.2);
-  g.add(menos, mais);
-  const aviso = panel(2.4, 0.12, (ctx, W, H) => rich(ctx, Sm.aviso, 0, 1, W, 4.3, { color: COL.mute, align: 'center' }));
-  place(aviso, 0, 2.42, 2.7);
-  g.add(aviso);
-  atualizar();
-  addUpdater(g, (t, dt) => {
-    const vel = 0.25 + (st.inv - Sm.min) / (Sm.max - Sm.min) * 0.6;
-    gotas.forEach((s, i) => {
-      s.userData.f = (s.userData.f + dt * vel * 0.5) % 1;
-      const f = s.userData.f, y = lerp(2.15, 1.1, f), r = lerp(0.46, 0.12, f) * (0.3 + 0.7 * Math.abs(Math.sin(s.userData.a)));
-      const a = s.userData.a + t * 0.8;
-      const sobrevive = i / gotas.length < [1, 0.7, 0.45, 0.22][Math.min(3, Math.floor(f * 4))];
-      s.position.set(centro.x + Math.sin(a) * r, y, centro.z + Math.cos(a) * r);
-      s.material.color.set(f > 0.75 ? YEL : ORG);
-      op(s, sobrevive ? Math.sin(f * Math.PI) * 0.9 : 0);
-    });
-    aneis.forEach((a, i) => { a.rotation.z = t * (0.3 + i * 0.1); });
-  });
+// ============================================== 7. vídeo de resultados ===
+// Antes do primeiro passo (CTA): o vídeo vertical com os resultados dos clientes.
+// Quando ele termina (ou o cliente toca em Pular), segue para Assinar / Falar com atendente.
+function cenaResultados(g) {
+  const R = K.reelFinal;
+  const video = document.createElement('video');
+  video.src = R.video; video.playsInline = true; video.crossOrigin = 'anonymous'; video.preload = 'auto';
+  video.setAttribute('playsinline', '');
+  const tex = new THREE.VideoTexture(video);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const HV = 1.42, WV = HV * 9 / 16, Y = 1.62, DIST = 2.3;
+  const quadro = new THREE.Group();
+  const moldura = panel(WV + 0.06, HV + 0.06, (ctx, W, H) => cardBg(ctx, W, H, { r: 4, accent: COL.yellow, strong: true }));
+  const tela = new THREE.Mesh(new THREE.PlaneGeometry(WV, HV), new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false, transparent: true }));
+  tela.position.z = 0.003;
+  tela.renderOrder = 2;
+  tela.userData.video = video;           // pausa sozinho se a cena for destruída
+  quadro.add(moldura, tela);
+  place(quadro, 0, Y, DIST);
+  const brilho = glow(2.4, YEL, 0.16);
+  brilho.position.copy(quadro.position); brilho.position.z -= 0.08;
+  const rot = panel(1.4, 0.09, (ctx, W, H) => eyebrow(ctx, R.eyebrow, 0, 1.5, W, { align: 'center', color: COL.yellow }));
+  place(rot, 0, Y + HV / 2 + 0.12, DIST);
+  const pular = botao(0.36, 0.12, R.pular, () => seguir());
+  place(pular, 0, Y - HV / 2 - 0.13, DIST - 0.05);
+  g.add(brilho, quadro, rot, pular);
+  [brilho, quadro, rot, pular].forEach((c, i) => reveal(c, { delay: D + 0.1 * i, owner: g }));
+  video.addEventListener('playing', () => { tela.material.map = tex; tela.material.color.set(0xffffff); tela.material.needsUpdate = true; }, { once: true });
+  let foi = false;
+  function seguir() {
+    if (foi || g.userData.leaving || g.userData.dead) return;
+    foi = true;
+    app.irPara('cta');
+  }
+  g.userData.aoSair = () => { video.pause(); duckVideo(false); };
+  video.addEventListener('ended', seguir);
+  video.addEventListener('error', seguir);
+  quadro.getWorldPosition(v3);
+  somEspacialVideo(video, v3);
+  duckVideo(true);
+  video.play().catch(() => { video.muted = true; video.play().catch(seguir); });
+  app.setNav({ back: { label: '← Voltar', fn: () => app.voltar() }, next: { label: 'Continuar →', fn: seguir } });
 }
 
 // ================================================================== 8. CTA ===
@@ -843,7 +751,6 @@ export const CENAS = [
   { id: 'estrutura', fala: 'estrutura', build: cenaEstrutura },
   { id: 'diagnostico', fala: 'diagnostico', build: cenaDiagnostico },
   { id: 'jornada', fala: 'jornada', build: cenaJornada },
-  { id: 'acompanhamento', fala: 'acompanhamento', build: cenaAcompanhamento },
-  { id: 'simulador', fala: 'simulador', build: cenaSimulador },
+  { id: 'resultados', fala: null, build: cenaResultados },
   { id: 'cta', fala: 'cta', build: cenaCta },
 ];

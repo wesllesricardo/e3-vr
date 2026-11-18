@@ -385,7 +385,6 @@ async function avisarCloser(tipo) {
   const extras = [
     prog && `Programa sugerido: ${prog.nome} (${prog.duracao})`,
     r.area && `Área: ${r.area}`,
-    r.canal && `Clientes vêm de: ${r.canal}`,
     r.desafio && `Desafio: ${r.desafio}`,
   ].filter(Boolean);
   const corpo = `${ESTACAO}: o cliente quer ${assinar ? 'ASSINAR O CONTRATO' : 'FALAR COM UM ATENDENTE'} agora.` + (extras.length ? '\n' + extras.join('\n') : '');
@@ -419,7 +418,7 @@ function encerrar() {
   tw(3.2, k => { setProg(p0 * (1 - k)); setLuz(l0 * (1 - k)); }, { ease: E.inOut });
   fimGrp = new THREE.Group();
   FRENTE.add(fimGrp);
-  const p = panel(1.9, 0.42, (ctx, W, H) => {
+  const p = panel(2.5, 0.44, (ctx, W, H) => {
     cardBg(ctx, W, H, { r: 7 });
     const y = rich(ctx, K.fim.titulo, 10, 9, W - 20, 10, { font: F_HEAD, weight: 700, align: 'center' });
     rich(ctx, K.fim.texto, 10, y + 3, W - 20, 5.6, { color: COL.mute, align: 'center' });
@@ -501,6 +500,64 @@ function mostrarTelaInicial() {
   $('intro').classList.remove('off');
   $('hud').classList.add('off');
 }
+// ------------------------------------------------------------ sem internet ---
+// Internet do evento pode ser fraca: o botão baixa vídeos, fotos, narração e código para o
+// próprio óculos (sw.js serve tudo dali). Fazer uma vez, com boa conexão, antes do evento.
+const CACHE_MIDIA = 'e3vr-midia-v1', CACHE_CODIGO = 'e3vr-codigo-v1';
+async function listaOffline() {
+  const midia = ['media/logo-e3.png', K.reelFinal.video];
+  for (const v of K.depoimentos.videos) midia.push(`media/depoimentos/${v.arquivo}.mp4`, `media/depoimentos/${v.arquivo}.jpg`);
+  try {
+    const man = await (await fetch('media/narracao/manifest.json', { cache: 'no-cache' })).json();
+    for (const [k, v] of Object.entries(man)) midia.push(`media/narracao/${k}.mp3?v=${v.hash}`);
+  } catch (e) { /* sem manifesto: segue sem a narração */ }
+  const codigo = [new URL('./', location.href).href, 'closer.html', 'media/narracao/manifest.json'];
+  for (const e of performance.getEntriesByType('resource')) {
+    const u = new URL(e.name);
+    if (u.hostname === 'ntfy.sh' || u.pathname.includes('/media/')) continue;
+    codigo.push(e.name);
+  }
+  return { midia: midia.map(u => new URL(u, location.href).href), codigo: [...new Set(codigo)] };
+}
+function statusOffline(t, ok = false) { const el = $('offlineStatus'); el.textContent = t; el.classList.toggle('ok', ok); }
+async function verificarOffline() {
+  if (!('caches' in window)) return;
+  const { midia } = await listaOffline();
+  const c = await caches.open(CACHE_MIDIA);
+  let tem = 0;
+  for (const u of midia) if (await c.match(u)) tem++;
+  $('offline').hidden = false;
+  if (tem === midia.length) { statusOffline('✓ Tudo baixado neste aparelho: funciona sem internet.', true); $('offline').textContent = 'Baixar de novo'; }
+  else statusOffline(tem ? `${tem} de ${midia.length} arquivos já estão neste aparelho.` : 'Faça isso uma vez, com boa internet, antes do evento.');
+}
+async function baixarOffline() {
+  const b = $('offline');
+  b.disabled = true;
+  const { midia, codigo } = await listaOffline();
+  const cm = await caches.open(CACHE_MIDIA), cc = await caches.open(CACHE_CODIGO);
+  const total = midia.length + codigo.length;
+  let feito = 0, falhas = 0;
+  const um = async (cache, u) => {
+    try {
+      const r = await fetch(u, { cache: 'reload' });
+      if (!r.ok) throw new Error(r.status);
+      await cache.put(u, r);
+    } catch (e) { falhas++; }
+    feito++;
+    statusOffline(`Baixando ${feito} de ${total}…`);
+  };
+  for (const u of codigo) await um(cc, u);
+  for (const u of midia) await um(cm, u);
+  b.disabled = false;
+  if (falhas) statusOffline(`${falhas} arquivo(s) não baixaram. Confira a internet e toque de novo.`);
+  else { statusOffline('✓ Tudo baixado neste aparelho: funciona sem internet.', true); b.textContent = 'Baixar de novo'; }
+}
+if ('serviceWorker' in navigator && 'caches' in window) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  $('offline').addEventListener('click', () => baixarOffline());
+  verificarOffline().catch(() => {});
+}
+
 let temXR = false;
 $('entrarVR').addEventListener('click', () => {
   if (temXR) return entrarXR();

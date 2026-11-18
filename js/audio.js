@@ -8,7 +8,7 @@ import { THREE, camera } from './motor.js';
 let listener = null, ctx = null;
 const bus = {};
 let noiseBuf = null, padFrio = null, padLuz = null, humor = 'nenhum', proxNota = 0, proxTick = 0;
-let narrando = false, tokenVoz = 0, fonteVoz = null, analisador = null, amostras = null, nivel = 0;
+let narrando = false, videoTocando = false, tokenVoz = 0, fonteVoz = null, analisador = null, amostras = null, nivel = 0;
 const buffers = {};
 let manifesto = {};
 
@@ -47,7 +47,7 @@ export function iniciarAudio() {
   bus.video = ganho(bus.master, 1.0);
   // eco suave para a trilha
   const eco = ctx.createDelay(1.0), fb = ctx.createGain(), mix = ctx.createGain();
-  eco.delayTime.value = 0.36; fb.gain.value = 0.32; mix.gain.value = 0.35;
+  eco.delayTime.value = 0.388; fb.gain.value = 0.3; mix.gain.value = 0.3;   // colcheia pontuada a 116 BPM
   bus.eco = ctx.createGain();
   bus.eco.connect(eco); eco.connect(fb); fb.connect(eco); eco.connect(mix); mix.connect(bus.musica);
   bus.eco.connect(bus.musica);
@@ -83,25 +83,101 @@ function pad(freqs, tipo, corte, vol, lfoHz) {
 export function setHumor(h, seg = 3) {
   humor = h;
   if (!ctx) return;
-  rampa(padFrio.gain, h === 'frio' ? 0.5 : h === 'luz' ? 0.08 : 0, seg);
-  rampa(padLuz.gain, h === 'luz' ? 0.42 : 0, seg);
-  rampa(bus.musica.gain, h === 'nenhum' ? 0 : (narrando ? 0.28 : 0.6), seg);
+  // na luz, os acordes da trilha animada substituem os pads parados (que destoariam da progressão)
+  rampa(padFrio.gain, h === 'frio' ? 0.5 : 0, seg);
+  rampa(padLuz.gain, 0, seg);
+  rampa(bus.musica.gain, h === 'nenhum' ? 0 : volumeMusica(), seg);
+  if (h === 'luz' && !batidaLigada) { batidaLigada = true; passo = 0; proxPasso = ctx.currentTime + 0.15; }
+  if (h !== 'luz') batidaLigada = false;
 }
+// volume da trilha: baixa com a narração e quase some com um vídeo tocando
+function volumeMusica() { return videoTocando ? 0.06 : narrando ? 0.26 : 0.6; }
 function duck(on) {
   narrando = on;
   if (!ctx || humor === 'nenhum') return;
-  rampa(bus.musica.gain, on ? 0.28 : 0.6, 0.6);
+  rampa(bus.musica.gain, volumeMusica(), 0.6);
 }
 
-// notas soltas e tique-taque, chamados a cada quadro
-const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+// --- trilha animada da luz: 116 BPM, progressão Dó – Lá menor – Fá – Sol ---------
+// Bumbo marcando o tempo, palma no 2 e no 4, chimbal, baixo sincopado, arpejo e
+// acordes. Tudo sintetizado e agendado um pouco à frente no relógio do áudio.
+const BPM = 116, P16 = 60 / BPM / 4;
+const ACORDES = [[261.63, 329.63, 392.0], [220.0, 261.63, 329.63], [174.61, 220.0, 261.63], [196.0, 246.94, 293.66]];
+const BAIXO = [65.41, 55.0, 87.31, 98.0];
+const RITMO_BAIXO = { 0: 1, 3: 1, 6: 1, 8: 2, 10: 1, 14: 1 };
+let batidaLigada = false, passo = 0, proxPasso = 0;
+function agendarBatida() {
+  const agora = ctx.currentTime;
+  if (proxPasso < agora) proxPasso = agora + 0.05;   // aba ficou parada: recomeça sem atropelar
+  while (proxPasso < agora + 0.25) {
+    tocarPasso(passo, proxPasso);
+    passo = (passo + 1) % 64;
+    proxPasso += P16;
+  }
+}
+function tocarPasso(p, t) {
+  const c = Math.floor(p / 16), s = p % 16, ac = ACORDES[c];
+  const entrada = p < 16 && !tocouVolta;            // 1º compasso sem bateria: a trilha "entra"
+  if (s === 0) acorde(ac, t, P16 * 15);
+  if (!entrada) {
+    if (s % 4 === 0) bumbo(t);
+    if (s === 4 || s === 12) palma(t);
+    if (s % 2 === 1) chimbal(t, s % 4 === 3 ? 0.05 : 0.028);
+  }
+  if (RITMO_BAIXO[s]) baixo(BAIXO[c] * RITMO_BAIXO[s], t, P16 * 1.6);
+  if (s % 2 === 0) pluck(ac[(s / 2) % 3] * (s % 8 >= 4 ? 2 : 1), t);
+  if (p === 63) tocouVolta = true;
+}
+let tocouVolta = false;
+function bumbo(t) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+  o.connect(g); g.connect(bus.musica); o.start(t); o.stop(t + 0.35);
+}
+function palma(t) {
+  const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 0.7;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  src.connect(f); f.connect(g); g.connect(bus.eco); src.start(t, Math.random()); src.stop(t + 0.2);
+}
+function chimbal(t, vol) {
+  const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+  const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  src.connect(f); f.connect(g); g.connect(bus.musica); src.start(t, Math.random()); src.stop(t + 0.06);
+}
+function baixo(freq, t, dur) {
+  const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = freq;
+  f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(180, t + dur); f.Q.value = 4;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f); f.connect(g); g.connect(bus.musica); o.start(t); o.stop(t + dur + 0.02);
+}
+function pluck(freq, t) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'triangle'; o.frequency.value = freq * 2;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.045, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  o.connect(g); g.connect(bus.eco); o.start(t); o.stop(t + 0.25);
+}
+function acorde(freqs, t, dur) {
+  const f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type = 'lowpass'; f.frequency.value = 1400; f.Q.value = 0.5;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07, t + 0.08); g.gain.setValueAtTime(0.07, t + dur * 0.7); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  f.connect(g); g.connect(bus.musica);
+  for (const fr of freqs) for (const det of [-6, 6]) {
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = det;
+    o.connect(f); o.start(t); o.stop(t + dur + 0.05);
+  }
+}
+
+// trilha animada e tique-taque, chamados a cada quadro
 export function updateAudio() {
   if (!ctx) return;
   const t = ctx.currentTime;
-  if (humor === 'luz' && t > proxNota) {
-    proxNota = t + 0.8 + Math.random() * 1.4;
-    nota(PENTA[Math.floor(Math.random() * PENTA.length)], 0.05, 1.6, bus.eco);
-  }
+  if (humor === 'luz' && batidaLigada) agendarBatida();
   if (humor === 'frio' && audio.relogio && t > proxTick) {
     proxTick = t + 1;
     sfx('tick', audio.relogio);
@@ -235,9 +311,10 @@ export function moverSomVideo(video, pos) {
   p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z;
 }
 export function duckVideo(on) {
+  videoTocando = on;
   if (!ctx) return;
-  rampa(bus.musica.gain, on ? 0.12 : (narrando ? 0.28 : 0.6), 0.5);
   if (on) pararNarracao();
+  rampa(bus.musica.gain, humor === 'nenhum' ? 0 : volumeMusica(), 0.5);
 }
 
 // Volume atual da narração (0 a ~0.5), para a luz-guia pulsar enquanto fala.

@@ -112,21 +112,19 @@ export const CONTEUDO = {
 
   diagnostico: {
     eyebrow: 'Diagnóstico rápido',
-    titulo: 'Três perguntas para achar o *seu ponto de partida.*',
+    titulo: 'Duas perguntas para achar o *seu ponto de partida.*',
     perguntas: [
       { id: 'area', texto: 'Qual é a principal área do seu escritório?',
-        opcoes: ['Previdenciário', 'Trabalhista', 'Família', 'Cível e consumidor', 'Tributário e empresarial', 'Outra área'] },
-      { id: 'canal', texto: 'Hoje, de onde vêm seus clientes?',
-        opcoes: ['Indicação', 'Anúncios', 'Redes sociais', 'Parcerias'] },
+        opcoes: ['Previdenciário', 'Trabalhista', 'Família', 'Outra área'] },
       { id: 'desafio', texto: 'Qual é o seu maior desafio agora?',
-        opcoes: ['Quase não chegam contatos novos', 'Os contatos chegam, mas não fecham', 'Quero começar a captar rápido', 'Meu escritório não é conhecido no digital'] },
+        opcoes: ['Chegam poucos contatos', 'Os contatos não fecham', 'Quero captar rápido', 'Não sou conhecido no digital'] },
     ],
     // Desafio → programa recomendado. Validar com o time comercial.
     recomendacao: {
-      'Quase não chegam contatos novos': 'estruturacao',
-      'Os contatos chegam, mas não fecham': 'aceleracao',
-      'Quero começar a captar rápido': 'light',
-      'Meu escritório não é conhecido no digital': 'evolucao-pro',
+      'Chegam poucos contatos': 'estruturacao',
+      'Os contatos não fecham': 'aceleracao',
+      'Quero captar rápido': 'light',
+      'Não sou conhecido no digital': 'evolucao-pro',
     },
     resultadoTitulo: 'Seu ponto de partida',
     botaoJornada: 'Ver minha jornada →',
@@ -215,17 +213,6 @@ export const CONTEUDO = {
     texto: 'Um time que acompanha os números com você, ajusta o que não está funcionando e mantém o escritório crescendo.',
   },
 
-  simulador: {
-    eyebrow: 'Simulador ilustrativo',
-    titulo: 'Do anúncio ao *contrato assinado.*',
-    rotulo: 'Investimento mensal em anúncios',
-    min: 2000, max: 30000, passo: 1000, inicial: 8000,
-    // Premissas ilustrativas: ajuste com números reais do time E3.
-    custoPorContato: 35, taxaQualificacao: 0.35, taxaAtendimento: 0.7, taxaFechamento: 0.25,
-    etapas: ['Contatos', 'Qualificados pela IA', 'Atendimentos', 'Contratos'],
-    aviso: 'Simulação ilustrativa, sem promessa de resultado. Os números reais dependem da área, da região e do comercial do escritório.',
-  },
-
   depoimentos: {
     eyebrow: 'À sua direita',
     titulo: 'Quem já está *na luz.*',
@@ -297,6 +284,13 @@ export const CONTEUDO = {
     tireOculos: 'Pode tirar o óculos com calma.',
     erroAviso: 'Não consegui avisar o time pela internet. Acene para um atendente, por favor.',
     voltar: 'Voltar ao estande',
+  },
+
+  // Vídeo de resultados: cena logo antes do primeiro passo (CTA). O jogo usa o mesmo arquivo no fim.
+  reelFinal: {
+    video: 'media/resultados-e3.mp4',
+    eyebrow: 'Resultados de quem está com a E3',
+    pular: 'Pular ›',
   },
 
   fim: {

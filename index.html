@@ -12,15 +12,15 @@
 {
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-  "./js/ambiente.js": "./js/ambiente.js?v=202611171609",
-  "./js/app.js": "./js/app.js?v=202611171609",
-  "./js/audio.js": "./js/audio.js?v=202611171609",
-  "./js/cenas.js": "./js/cenas.js?v=202611171609",
-  "./js/conteudo.js": "./js/conteudo.js?v=202611171609",
-  "./js/guia.js": "./js/guia.js?v=202611171609",
-  "./js/laterais.js": "./js/laterais.js?v=202611171609",
-  "./js/motor.js": "./js/motor.js?v=202611171609",
-  "./js/narracao.js": "./js/narracao.js?v=202611171609"
+  "./js/ambiente.js": "./js/ambiente.js?v=202611181036",
+  "./js/app.js": "./js/app.js?v=202611181036",
+  "./js/audio.js": "./js/audio.js?v=202611181036",
+  "./js/cenas.js": "./js/cenas.js?v=202611181036",
+  "./js/conteudo.js": "./js/conteudo.js?v=202611181036",
+  "./js/guia.js": "./js/guia.js?v=202611181036",
+  "./js/laterais.js": "./js/laterais.js?v=202611181036",
+  "./js/motor.js": "./js/motor.js?v=202611181036",
+  "./js/narracao.js": "./js/narracao.js?v=202611181036"
  }
 }
 </script>
@@ -55,6 +55,10 @@
   .opcoes label { display:inline-flex; gap:8px; align-items:center; cursor:pointer; }
   .opcoes input { width:18px; height:18px; accent-color:var(--orange); }
   #versao { margin-top:6px; font-size:12px; color:var(--mute); opacity:.7; font-variant-numeric:tabular-nums; }
+  .offline { margin-top:18px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .offline button { font-size:14px; padding:10px 18px; }
+  #offlineStatus { font-size:13px; color:var(--mute); min-height:1.3em; font-variant-numeric:tabular-nums; }
+  #offlineStatus.ok { color:var(--yellow); }
   #status { margin-top:16px; font-size:13px; color:var(--mute); min-height:1.4em; }
   #hud { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:space-between; align-items:center;
     gap:12px; padding:14px 18px; pointer-events:none; z-index:4; font-size:13px; color:var(--mute); }
@@ -78,8 +82,12 @@
       <label><input type="checkbox" id="narracao" checked> Narração automática</label>
       <a href="closer.html" style="color:var(--orange)">Roteiro do closer</a>
     </div>
+    <div class="offline">
+      <button class="sec" id="offline" hidden>Baixar tudo para usar sem internet</button>
+      <div id="offlineStatus"></div>
+    </div>
     <div id="status">Carregando…</div>
-    <div id="versao">Versão 17/11 16h09</div>
+    <div id="versao">Versão 18/11 10h36</div>
   </div>
 </div>
 
@@ -88,6 +96,6 @@
   <span style="display:flex;gap:8px"><button class="sec" id="resetHud">↺ Resetar</button><button class="pri" id="vrHud" hidden>Entrar no mundo da E3</button></span>
 </div>
 
-<script type="module" src="js/app.js?v=202611171609"></script>
+<script type="module" src="js/app.js?v=202611181036"></script>
 </body>
 </html>

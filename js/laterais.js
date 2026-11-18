@@ -59,7 +59,7 @@ function criarTela() {
   tela.renderOrder = 2;
   tela.position.z = 0.002;
   g.add(tela);
-  const t = { g, moldura, tela, video, vtex, item: null, poster: null, pronto: false, slot: 0 };
+  const t = { g, moldura, tela, video, vtex, item: null, srcItem: null, poster: null, pronto: false, slot: 0 };
   // só troca o pôster pelo vídeo quando já existe um quadro de verdade (evita tela branca)
   video.addEventListener('timeupdate', () => {
     if (t.item && !t.pronto && video.currentTime > 0.05 && video.readyState >= 2) { tela.material.map = vtex; tela.material.needsUpdate = true; t.pronto = true; }
@@ -87,9 +87,29 @@ function carregarItem(t, item) {
     t.poster = tx;
     if (!t.pronto) { t.tela.material.map = tx; t.tela.material.needsUpdate = true; }
   }, undefined, () => {});
-  t.video.src = `media/depoimentos/${item.arquivo}.mp4`;
+  soltarVideo(t);
+}
+
+// Internet fraca no evento: só a tela do centro (ou a que está em foco) baixa e toca o
+// vídeo. As laterais mostram a foto do depoimento e não gastam rede.
+function garantirVideo(t) {
+  if (!t.item || t.srcItem === t.item) return;
+  t.pronto = false;
+  t.srcItem = t.item;
+  t.video.src = `media/depoimentos/${t.item.arquivo}.mp4`;
   t.video.load();
-  if (dep.ativo) t.video.play().catch(() => {});
+}
+function soltarVideo(t) {
+  t.video.pause();
+  if (t.srcItem) { t.video.removeAttribute('src'); t.video.load(); t.srcItem = null; }
+  t.pronto = false;
+  if (t.item) { t.tela.material.map = t.poster || texturaPlaceholder(t.item.nome); t.tela.material.needsUpdate = true; }
+}
+function atualizarVideos() {
+  dep.telas.forEach(t => {
+    if (dep.ativo && (t === dep.foco || (!dep.foco && t.slot === 0))) { garantirVideo(t); t.video.play().catch(() => {}); }
+    else if (t !== dep.foco) soltarVideo(t);
+  });
 }
 
 function posicionar(t, slotF) {
@@ -136,12 +156,12 @@ export function ativarDepoimentos(on) {
   if (on) {
     dep.grupo.visible = true;
     dep.telas.forEach(t => { if (Math.abs(t.slot) <= 1 && t.item !== itemDoSlot(t.slot)) carregarItem(t, itemDoSlot(t.slot)); });
-    dep.telas.forEach(t => { if (Math.abs(t.slot) <= 1) t.video.play().catch(() => {}); });
+    atualizarVideos();
     reveal(dep.grupo, { dy: 0.2, dur: 1.2 });
     dep.ultimoGiro = S.T;
   } else {
     desfocar();
-    dep.telas.forEach(t => t.video.pause());
+    dep.telas.forEach(t => soltarVideo(t));
     dep.grupo.visible = false;
   }
 }
@@ -156,9 +176,7 @@ function girar(dir = 1, manual = false) {
   const telas = dep.telas;
   const reserva = telas.find(t => Math.abs(t.slot) > 1);
   reserva.slot = dir > 0 ? 2 : -2;
-  reserva.video.pause();
   carregarItem(reserva, itemDoSlot(reserva.slot));
-  reserva.video.pause();
   posicionar(reserva, reserva.slot);
   telas.forEach(t => { t.slot0 = t.slot; });
   tw(manual ? 0.8 : 1.3, k => telas.forEach(t => posicionar(t, t.slot0 - dir * k)), {
@@ -167,8 +185,8 @@ function girar(dir = 1, manual = false) {
       telas.forEach(t => {
         t.slot = t.slot0 - dir;
         posicionar(t, t.slot);
-        if (Math.abs(t.slot) <= 1) t.video.play().catch(() => {}); else t.video.pause();
       });
+      atualizarVideos();
       dep.base = ((dep.base + dir) % dep.n + dep.n) % dep.n;
       dep.contador.userData.state.i = dep.base;
       dep.contador.userData.redraw();
@@ -181,6 +199,7 @@ function focar(t) {
   if (dep.foco) desfocar();
   dep.foco = t;
   dep.telas.forEach(o => { if (o !== t) o.video.pause(); });
+  garantirVideo(t);
   t.moldura.userData.state.foco = true;
   t.moldura.userData.redraw();
   t.tela.getWorldPosition(v3);
@@ -204,7 +223,7 @@ function desfocar() {
   duckVideo(false);
   tw(0.5, k => t.g.scale.setScalar(1.22 - 0.22 * k));
   dep.ultimoGiro = S.T;
-  if (dep.ativo) dep.telas.forEach(o => { if (Math.abs(o.slot) <= 1) o.video.play().catch(() => {}); });
+  atualizarVideos();
 }
 export function pararVideos() { desfocar(); }
 

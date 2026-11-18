@@ -1,31 +1,31 @@
 {
   "intro": {
-    "hash": "51cee00cd187",
-    "dur": 11.58
+    "hash": "43f06430e14f",
+    "dur": 10.56
   },
   "escuro": {
-    "hash": "3847ac9b85e1",
-    "dur": 13.85
+    "hash": "e2570c17c157",
+    "dur": 9.24
   },
   "vire": {
     "hash": "d8dae8d63ad6",
     "dur": 3.69
   },
   "luz": {
-    "hash": "2a1c103c1a9e",
-    "dur": 15.66
+    "hash": "e1b842f49fe4",
+    "dur": 12.57
   },
   "metodo": {
-    "hash": "9d15e89e10f7",
-    "dur": 8.73
+    "hash": "a32fdafcb20b",
+    "dur": 6.7
   },
   "entrada": {
-    "hash": "4cc3a8dc330a",
-    "dur": 12.44
+    "hash": "8d8f532bf24c",
+    "dur": 7.36
   },
   "estrutura": {
-    "hash": "4a057310a161",
-    "dur": 11.35
+    "hash": "b00fe91919b1",
+    "dur": 9.77
   },
   "midia": {
     "hash": "8266e3b32a6b",
@@ -52,28 +52,20 @@
     "dur": 5.16
   },
   "diagnostico": {
-    "hash": "fe7685eb2e04",
-    "dur": 5.78
+    "hash": "67caa7db4be2",
+    "dur": 4.59
   },
   "resultado": {
-    "hash": "a1304d9c6aa7",
-    "dur": 7.45
+    "hash": "d992ac73f510",
+    "dur": 5.91
   },
   "jornada": {
-    "hash": "cf63a5eedeee",
-    "dur": 8.38
-  },
-  "acompanhamento": {
-    "hash": "e61f93d8da75",
-    "dur": 10.3
-  },
-  "simulador": {
-    "hash": "e7a718103b20",
-    "dur": 10.5
+    "hash": "d97f14a19b6d",
+    "dur": 10.97
   },
   "cta": {
-    "hash": "4537e14af559",
-    "dur": 9.71
+    "hash": "1f8247d08654",
+    "dur": 9.19
   },
   "assinar": {
     "hash": "554fe787d5db",
