@@ -330,3 +330,6 @@ export function setPosVoz(p) {
   if (!bus.vozPan) return;
   bus.vozPan.positionX.value = p.x; bus.vozPan.positionY.value = p.y; bus.vozPan.positionZ.value = p.z;
 }
+
+// FECHAR: silencia tudo de uma vez (o contexto de áudio para de processar)
+export function suspenderAudio() { if (ctx) ctx.suspend().catch(() => {}); }

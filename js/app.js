@@ -11,7 +11,7 @@ import {
   addUpdater, click, ctrls,
 } from './motor.js';
 import { CONTEUDO as K, CONFIG } from './conteudo.js';
-import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNarracaoAtiva, audio, duracaoFala } from './audio.js';
+import { iniciarAudio, setHumor, sfx, narrar, pararNarracao, updateAudio, setNarracaoAtiva, audio, duracaoFala, suspenderAudio } from './audio.js';
 import { amb, setProg, setLuz, updateAmbiente, carregarLogo, direcaoLuz, posicaoChamado, flashLuz, girarNucleo } from './ambiente.js';
 import { criarDepoimentos, ativarDepoimentos, criarCases, ativarCases, updateLaterais, pararVideos } from './laterais.js';
 import { CENAS } from './cenas.js';
@@ -32,6 +32,7 @@ renderer.setClearColor(0x2b2e33, 1);   // em tela, a "sala real" é um cinza neu
 function setFase(f) {
   fase = f; tFase = 0;
   if (typeof resetTras !== 'undefined') resetTras.visible = f === 'escuro' || f === 'vire';
+  if (typeof fecharTras !== 'undefined') fecharTras.visible = f === 'escuro' || f === 'vire';
   if (typeof rotularReset === 'function' && confirmaAte) { confirmaAte = 0; rotularReset(false); }
 }
 function depois(seg, fn) { tw(seg, () => {}, { done: fn, ease: E.lin }); }
@@ -104,8 +105,11 @@ function mostrarIntro() {
   guia.mostrar(true);
   guia.alvo(comecar, { avisar: false });
   const voz = botao(0.5, 0.13, vozLabel(), () => { alternarVoz(); setLabel(voz, vozLabel()); });
-  place(voz, 0, 0.84, 2.1);
+  place(voz, -6, 0.84, 2.1);
   introGrp.add(voz);
+  const fecharIntro = criarFechar(0.42, 0.13);
+  place(fecharIntro, 6, 0.84, 2.1);
+  introGrp.add(fecharIntro);
   introGrp.children.forEach((c, i) => reveal(c, { delay: 0.2 + i * 0.1 }));
   const brilho = glow(1.3, YEL, 0.2);
   brilho.position.copy(comecar.position); brilho.position.z -= 0.05;
@@ -302,10 +306,58 @@ resetFrente.position.set(-1.06, -0.02, 0);
 nav.add(resetFrente);
 // no lado sombrio (antes da virada) também dá para resetar
 const resetTras = criarReset(0.5, 0.15);
-place(resetTras, 0, 0.78, 2.0);
+place(resetTras, -9, 0.78, 2.0);
 resetTras.rotation.x = -0.35;
 TRAS.add(resetTras);
 resetTras.visible = false;
+// ---------------------------------------------------------- FECHAR ---
+// Fecha tudo de verdade: sai do modo imersivo, para narração, música, vídeos e o desenho
+// da cena. Também pede um segundo toque. "Abrir de novo" recarrega a página do zero.
+let fechaAte = 0, fechado = false;
+const botoesFechar = [];
+function criarFechar(w = 0.42, h = 0.13) {
+  const b = card(w, h, (ctx, W, H, s) => pill(ctx, W, H, s.label, { fill: s.confirma ? '#E0524B' : 'rgba(20,16,12,0.92)', stroke: '#E0524B', color: COL.text, size: H * 0.36 }),
+    { label: '✕ FECHAR', confirma: false }, () => pedirFechar());
+  botoesFechar.push(b);
+  return b;
+}
+function rotularFechar(confirma) {
+  botoesFechar.forEach(b => {
+    const st = b.userData.mesh.userData.state;
+    if (st.confirma === confirma) return;
+    st.confirma = confirma; st.label = confirma ? 'Toque de novo' : '✕ FECHAR';
+    b.userData.mesh.userData.redraw();
+  });
+}
+function pedirFechar() {
+  if (S.T < fechaAte) { fechaAte = 0; rotularFechar(false); fecharTudo(); return; }
+  fechaAte = S.T + 3;
+  rotularFechar(true);
+  depois(3.05, () => { if (S.T >= fechaAte) rotularFechar(false); });
+}
+async function fecharTudo() {
+  if (fechado) return;
+  fechado = true;
+  resetar({ fala: false });       // para narração, vídeos e cenas
+  setHumor('nenhum', 0.2);
+  const sessao = renderer.xr.getSession();
+  if (sessao) await sessao.end().catch(() => {});
+  renderer.setAnimationLoop(null);
+  suspenderAudio();
+  $('intro').classList.add('off');
+  $('hud').classList.add('off');
+  $('fechado').classList.remove('off');
+  try { window.close(); } catch (e) { /* o navegador pode não deixar fechar a aba */ }
+}
+const fecharFrente = criarFechar();
+fecharFrente.position.set(-1.06, -0.17, 0);
+nav.add(fecharFrente);
+const fecharTras = criarFechar(0.5, 0.15);
+place(fecharTras, 9, 0.78, 2.0);
+fecharTras.rotation.x = -0.35;
+TRAS.add(fecharTras);
+fecharTras.visible = false;
+
 // segurar o botão B ou Y do controle por 2 segundos também reseta (atalho do closer)
 let seguraReset = 0;
 function checarBotaoReset(dt) {
@@ -473,6 +525,7 @@ async function entrarXR() {
 }
 renderer.xr.addEventListener('sessionend', () => {
   esperaPose = null;
+  if (fechado) return;
   view.yaw = view.pitch = view.tyaw = view.tpitch = 0;
   camera.position.set(0, 1.6, 0);
   mostrarTelaInicial();
@@ -567,6 +620,8 @@ $('entrarVR').addEventListener('click', () => {
 });
 $('vrHud').addEventListener('click', entrarXR);
 $('resetHud').addEventListener('click', () => voltarAoInicio());
+$('fecharHud').addEventListener('click', () => fecharTudo());
+$('abrirDeNovo').addEventListener('click', () => location.reload());
 $('narracao').addEventListener('change', e => aplicarVoz(e.target.checked));
 {
   let salvo = null;

@@ -12,15 +12,15 @@
 {
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-  "./js/ambiente.js": "./js/ambiente.js?v=202611181036",
-  "./js/app.js": "./js/app.js?v=202611181036",
-  "./js/audio.js": "./js/audio.js?v=202611181036",
-  "./js/cenas.js": "./js/cenas.js?v=202611181036",
-  "./js/conteudo.js": "./js/conteudo.js?v=202611181036",
-  "./js/guia.js": "./js/guia.js?v=202611181036",
-  "./js/laterais.js": "./js/laterais.js?v=202611181036",
-  "./js/motor.js": "./js/motor.js?v=202611181036",
-  "./js/narracao.js": "./js/narracao.js?v=202611181036"
+  "./js/ambiente.js": "./js/ambiente.js?v=202611181127",
+  "./js/app.js": "./js/app.js?v=202611181127",
+  "./js/audio.js": "./js/audio.js?v=202611181127",
+  "./js/cenas.js": "./js/cenas.js?v=202611181127",
+  "./js/conteudo.js": "./js/conteudo.js?v=202611181127",
+  "./js/guia.js": "./js/guia.js?v=202611181127",
+  "./js/laterais.js": "./js/laterais.js?v=202611181127",
+  "./js/motor.js": "./js/motor.js?v=202611181127",
+  "./js/narracao.js": "./js/narracao.js?v=202611181127"
  }
 }
 </script>
@@ -33,6 +33,9 @@
   #intro { position:fixed; inset:0; display:grid; place-items:center; padding:24px;
     background:radial-gradient(120% 90% at 50% 40%, rgba(7,5,2,.6), rgba(7,5,2,.95));
     backdrop-filter:blur(6px); transition:opacity .5s ease, visibility .5s; z-index:5; }
+  .fechado { position:fixed; inset:0; display:grid; place-items:center; padding:24px; background:#070502; z-index:20; }
+  .fechado.off { display:none; }
+  .fechado h1 { margin-top:22px; }
   #intro.off { opacity:0; visibility:hidden; pointer-events:none; }
   .box { max-width:560px; text-align:center; }
   .logo { width:84px; height:auto; }
@@ -87,15 +90,23 @@
       <div id="offlineStatus"></div>
     </div>
     <div id="status">Carregando…</div>
-    <div id="versao">Versão 18/11 10h36</div>
+    <div id="versao">Versão 18/11 11h27</div>
   </div>
 </div>
 
+<div id="fechado" class="fechado off">
+  <div class="box">
+    <img class="logo" src="media/logo-e3.png" alt="E3 Company">
+    <h1>Experiência <em>fechada.</em></h1>
+    <p>Tudo foi encerrado: imagem, som e vídeos. Pode tirar o óculos com calma.</p>
+    <button class="pri" id="abrirDeNovo" type="button">Abrir de novo</button>
+  </div>
+</div>
 <div id="hud" class="off">
   <span>Arraste para olhar · Clique para interagir · Espaço avança · T vira para a luz · N liga/desliga a voz · R reinicia</span>
-  <span style="display:flex;gap:8px"><button class="sec" id="resetHud">↺ Resetar</button><button class="pri" id="vrHud" hidden>Entrar no mundo da E3</button></span>
+  <span style="display:flex;gap:8px"><button class="sec" id="resetHud">↺ Resetar</button><button class="sec" id="fecharHud">✕ Fechar</button><button class="pri" id="vrHud" hidden>Entrar no mundo da E3</button></span>
 </div>
 
-<script type="module" src="js/app.js?v=202611181036"></script>
+<script type="module" src="js/app.js?v=202611181127"></script>
 </body>
 </html>
